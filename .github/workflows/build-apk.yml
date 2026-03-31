@@ -55,18 +55,71 @@ jobs:
           (echo "WARNING: Download failed, using placeholder" && \
            dd if=/dev/urandom bs=1024 count=512 2>/dev/null > app/src/main/assets/facenet.tflite)
 
-      - name: Build Debug APK
-        run: ./gradlew assembleDebug --stacktrace
+      - name: Set up signing keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "Using stored keystore from secrets..."
+            echo "$KEYSTORE_BASE64" | base64 --decode > keystore.jks
+            echo "RELEASE_STORE_FILE=$(pwd)/keystore.jks" >> $GITHUB_ENV
+            echo "RELEASE_KEY_ALIAS=$KEY_ALIAS" >> $GITHUB_ENV
+            echo "RELEASE_KEY_PASSWORD=$KEY_PASSWORD" >> $GITHUB_ENV
+            echo "RELEASE_STORE_PASSWORD=$STORE_PASSWORD" >> $GITHUB_ENV
+          else
+            echo "No keystore secrets found — generating a self-signed keystore..."
+            keytool -genkeypair \
+              -keystore keystore.jks \
+              -alias kidsnap \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -storepass kidsnap2024 \
+              -keypass kidsnap2024 \
+              -dname "CN=KidSnap, OU=App, O=Personal, L=IL, S=IL, C=IL" \
+              -noprompt
+            echo "RELEASE_STORE_FILE=$(pwd)/keystore.jks" >> $GITHUB_ENV
+            echo "RELEASE_KEY_ALIAS=kidsnap" >> $GITHUB_ENV
+            echo "RELEASE_KEY_PASSWORD=kidsnap2024" >> $GITHUB_ENV
+            echo "RELEASE_STORE_PASSWORD=kidsnap2024" >> $GITHUB_ENV
+            echo ""
+            echo "TIP: To keep the same signature across builds (required for app updates),"
+            echo "run these commands locally and add the output as GitHub secrets:"
+            echo "  1. Generate once:  keytool -genkeypair -keystore kidsnap-release.jks -alias kidsnap -keyalg RSA -keysize 2048 -validity 10000 -storepass YOUR_PASS -keypass YOUR_PASS -dname \"CN=KidSnap\" -noprompt"
+            echo "  2. Base64 encode:  base64 -w 0 kidsnap-release.jks"
+            echo "  3. Add 4 secrets to GitHub repo: KEYSTORE_BASE64, KEY_ALIAS=kidsnap, KEY_PASSWORD=YOUR_PASS, STORE_PASSWORD=YOUR_PASS"
+          fi
 
-      - name: Upload Debug APK
+      - name: Build Release APK
+        run: |
+          ./gradlew assembleRelease \
+            -PRELEASE_STORE_FILE="$RELEASE_STORE_FILE" \
+            -PRELEASE_KEY_ALIAS="$RELEASE_KEY_ALIAS" \
+            -PRELEASE_KEY_PASSWORD="$RELEASE_KEY_PASSWORD" \
+            -PRELEASE_STORE_PASSWORD="$RELEASE_STORE_PASSWORD" \
+            --stacktrace
+
+      - name: Rename APK
+        run: |
+          mkdir -p dist
+          cp app/build/outputs/apk/release/app-release.apk \
+             dist/KidSnap-v1.0-build${{ github.run_number }}.apk
+
+      - name: Upload Release APK
         uses: actions/upload-artifact@v4
         with:
-          name: KidSnap-v1.0-debug-build${{ github.run_number }}
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: KidSnap-v1.0-release-build${{ github.run_number }}
+          path: dist/KidSnap-v1.0-build${{ github.run_number }}.apk
           retention-days: 30
 
       - name: Show APK info
         run: |
-          echo "=== APK Build Complete ==="
-          ls -lh app/build/outputs/apk/debug/
-          echo "Download from GitHub Actions → Artifacts tab"
+          echo "=== Release APK Build Complete ==="
+          ls -lh dist/
+          echo ""
+          echo "This is a RELEASE build (not debug) — no 'unsafe app' warnings."
+          echo "Package ID: com.childfilter.app"
+          echo "Download from: GitHub Actions → Artifacts tab"

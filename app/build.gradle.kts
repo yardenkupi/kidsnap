@@ -20,6 +20,21 @@ android {
         }
     }
 
+    signingConfigs {
+        create("release") {
+            val storeFile = project.findProperty("RELEASE_STORE_FILE") as String?
+            val keyAlias = project.findProperty("RELEASE_KEY_ALIAS") as String?
+            val keyPassword = project.findProperty("RELEASE_KEY_PASSWORD") as String?
+            val storePassword = project.findProperty("RELEASE_STORE_PASSWORD") as String?
+            if (storeFile != null && keyAlias != null && keyPassword != null && storePassword != null) {
+                this.storeFile = file(storeFile)
+                this.keyAlias = keyAlias
+                this.keyPassword = keyPassword
+                this.storePassword = storePassword
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -28,11 +43,11 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            // Signing will be handled via GitHub Actions secrets or locally
+            signingConfig = signingConfigs.getByName("release")
         }
         debug {
-            applicationIdSuffix = ".debug"
-            versionNameSuffix = "-debug"
+            // No suffix — keeps package ID consistent with release for permission grants
+            isDebuggable = true
         }
     }
 
