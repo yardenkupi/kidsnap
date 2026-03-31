@@ -3,7 +3,9 @@ package com.childfilter.app.ui.screens
 import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -94,7 +96,7 @@ fun ChildrenScreen(navController: NavController) {
     val bottomSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     val galleryLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
+        contract = PickVisualMedia()
     ) { uri: Uri? ->
         if (uri != null) {
             selectedPhotoUri = uri
@@ -129,7 +131,14 @@ fun ChildrenScreen(navController: NavController) {
                     faceNet.close()
                     isProcessing = false
                 } catch (e: Exception) {
-                    errorMessage = "Error processing photo: ${e.message}"
+                    croppedFaceBitmap = null
+                    computedEmbedding = null
+                    selectedPhotoUri = null
+                    errorMessage = when {
+                        e.message?.contains("model not loaded", ignoreCase = true) == true ->
+                            "Face recognition is not available in this build. Please download the app again."
+                        else -> "Failed to process photo: ${e.message}"
+                    }
                     isProcessing = false
                 }
             }
@@ -339,7 +348,7 @@ fun ChildrenScreen(navController: NavController) {
                         modifier = Modifier.fillMaxWidth()
                     )
                     TextButton(
-                        onClick = { galleryLauncher.launch("image/*") },
+                        onClick = { galleryLauncher.launch(PickVisualMediaRequest(PickVisualMedia.ImageOnly)) },
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(if (selectedPhotoUri == null) "Select Photo from Gallery" else "Change Photo")
