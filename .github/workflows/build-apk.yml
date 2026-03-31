@@ -102,24 +102,34 @@ jobs:
             -PRELEASE_STORE_PASSWORD="$RELEASE_STORE_PASSWORD" \
             --stacktrace
 
+      - name: Get version info
+        id: version
+        run: |
+          VERSION_NAME=$(grep 'versionName' app/build.gradle.kts | sed 's/.*"\(.*\)".*/\1/')
+          VERSION_CODE=$(grep 'versionCode' app/build.gradle.kts | sed 's/[^0-9]//g')
+          echo "name=$VERSION_NAME" >> $GITHUB_OUTPUT
+          echo "code=$VERSION_CODE" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION_NAME ($VERSION_CODE)"
+
       - name: Rename APK
         run: |
           mkdir -p dist
           cp app/build/outputs/apk/release/app-release.apk \
-             dist/KidSnap-v1.0-build${{ github.run_number }}.apk
+             dist/KidSnap-v${{ steps.version.outputs.name }}-build${{ github.run_number }}.apk
 
       - name: Upload Release APK
         uses: actions/upload-artifact@v4
         with:
-          name: KidSnap-v1.0-release-build${{ github.run_number }}
-          path: dist/KidSnap-v1.0-build${{ github.run_number }}.apk
+          name: KidSnap-v${{ steps.version.outputs.name }}-release-build${{ github.run_number }}
+          path: dist/KidSnap-v${{ steps.version.outputs.name }}-build${{ github.run_number }}.apk
           retention-days: 30
 
       - name: Show APK info
         run: |
           echo "=== Release APK Build Complete ==="
+          echo "Version: ${{ steps.version.outputs.name }} (code ${{ steps.version.outputs.code }})"
           ls -lh dist/
           echo ""
-          echo "This is a RELEASE build (not debug) — no 'unsafe app' warnings."
+          echo "This is a RELEASE build — no 'unsafe app' warnings."
           echo "Package ID: com.childfilter.app"
           echo "Download from: GitHub Actions → Artifacts tab"
