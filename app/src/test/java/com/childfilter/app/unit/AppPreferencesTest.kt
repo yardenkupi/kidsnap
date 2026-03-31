@@ -6,7 +6,6 @@ import com.childfilter.app.data.AppPreferences
 import com.childfilter.app.data.ChildProfile
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -17,31 +16,30 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.io.File
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [29], manifest = Config.NONE)
 class AppPreferencesTest {
 
     private lateinit var prefs: AppPreferences
+    private lateinit var context: Context
 
     @Before
     fun setUp() {
-        val context = ApplicationProvider.getApplicationContext<Context>()
+        context = ApplicationProvider.getApplicationContext()
+        // Delete DataStore file so every test starts with completely clean state.
+        // Partial teardown via prefs APIs misses keys like REFERENCE_EMBEDDING,
+        // SIMILARITY_THRESHOLD, KNOWN_GROUPS and LAST_ACTIVE_GROUP which have no
+        // dedicated clear method, causing cross-test leakage.
+        val datastoreDir = File(context.filesDir, "datastore")
+        datastoreDir.deleteRecursively()
+        // Reset the AppPreferences singleton so the next getInstance() call creates
+        // a fresh DataStore instance pointing at the newly emptied directory.
+        val field = AppPreferences::class.java.getDeclaredField("instance")
+        field.isAccessible = true
+        field.set(null, null)
         prefs = AppPreferences(context)
-    }
-
-    @After
-    fun tearDown() = runTest {
-        // Reset all state between tests
-        prefs.resetStats()
-        prefs.clearActivityLog()
-        prefs.clearChildren()
-        prefs.saveSelectedGroups(emptySet())
-        prefs.setServiceEnabled(false)
-        prefs.setDarkMode(false)
-        prefs.setNotificationsEnabled(true)
-        prefs.setHasSeenTutorial(false)
-        prefs.setOnboardingCompleted(false)
     }
 
     // ── saveEmbedding / getEmbedding round-trip ──
