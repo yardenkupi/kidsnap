@@ -20,4 +20,43 @@
     <string name="face_saved">Reference face saved successfully!</string>
     <string name="no_face_detected">No face detected. Please select a clearer photo.</string>
     <string name="multiple_faces">Multiple faces detected. Please select a photo with only your child.</string>
+
+    <!-- Navigation & actions -->
+    <string name="set_reference_photo">Set Reference Photo</string>
+    <string name="view_matched_photos">View Matched Photos</string>
+    <string name="start_watching">Start Watching</string>
+    <string name="stop_watching">Stop Watching</string>
+    <string name="service_running">Service Running</string>
+    <string name="service_stopped">Service Stopped</string>
+    <string name="select_groups">Select Groups</string>
+    <string name="manage_children">Manage Children</string>
+    <string name="matched_photos">Matched Photos</string>
+    <string name="settings">Settings</string>
+    <string name="no_photos_yet">No photos yet</string>
+    <string name="no_photos_desc">WhatsApp photos of your child will appear here</string>
+    <string name="my_children">My Children</string>
+    <string name="add_child">Add Child</string>
+    <string name="child_name">Child\'s name</string>
+    <string name="pick_photo">Pick Photo</string>
+    <string name="save">Save</string>
+    <string name="delete">Delete</string>
+    <string name="cancel">Cancel</string>
+    <string name="confirm_delete">Confirm Delete</string>
+    <string name="grant_access">Grant Access</string>
+    <string name="select_groups_title">Select WhatsApp Groups</string>
+    <string name="done">Done</string>
+    <string name="scanned">Scanned</string>
+    <string name="matched">Matched</string>
+    <string name="last_match">Last Match</string>
+    <string name="never">Never</string>
+    <string name="permissions_title">Required Permissions</string>
+    <string name="continue_btn">Continue</string>
+    <string name="statistics">Statistics</string>
+    <string name="reset_stats">Reset Statistics</string>
+    <string name="similarity_threshold">Similarity Threshold</string>
+    <string name="dark_mode">Dark Mode</string>
+    <string name="notifications_enabled">Notifications</string>
+    <string name="about">About</string>
+    <string name="version">Version</string>
+    <string name="clear_children">Clear All Children</string>
 </resources>
