@@ -8,10 +8,10 @@ import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.action.actionStartActivity
+import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
-import androidx.glance.clickable
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
@@ -21,7 +21,6 @@ import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
-import androidx.glance.layout.defaultWeight
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
@@ -54,43 +53,33 @@ fun WidgetContent(scanned: Int, matched: Int, isRunning: Boolean) {
             .background(ColorProvider(Color(0xFF0D47A1)))
             .clickable(actionStartActivity<MainActivity>())
             .padding(16.dp),
-        contentAlignment = Alignment.CenterStart
+        contentAlignment = Alignment.TopStart
     ) {
         Column(modifier = GlanceModifier.fillMaxSize()) {
-            // Header row: app name + status dot
-            Row(
-                modifier = GlanceModifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    "\uD83D\uDCF8 KidSnap",
-                    style = TextStyle(
-                        color = ColorProvider(Color.White),
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+            Text(
+                "\uD83D\uDCF8 KidSnap",
+                style = TextStyle(
+                    color = ColorProvider(Color.White),
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold
                 )
-                Spacer(GlanceModifier.defaultWeight())
-                Text(
-                    if (isRunning) "\u25CF Active" else "\u25CB Off",
-                    style = TextStyle(
-                        color = ColorProvider(if (isRunning) Color(0xFF81C784) else Color(0xFFBDBDBD)),
-                        fontSize = 12.sp
-                    )
+            )
+            Spacer(GlanceModifier.height(4.dp))
+            Text(
+                if (isRunning) "\u25CF Active" else "\u25CB Stopped",
+                style = TextStyle(
+                    color = ColorProvider(if (isRunning) Color(0xFF81C784) else Color(0xFFBDBDBD)),
+                    fontSize = 11.sp
                 )
-            }
-            Spacer(GlanceModifier.height(12.dp))
-            // Stats row
+            )
+            Spacer(GlanceModifier.height(10.dp))
             Row(modifier = GlanceModifier.fillMaxWidth()) {
-                Column(
-                    modifier = GlanceModifier.defaultWeight(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
+                Column {
                     Text(
                         scanned.toString(),
                         style = TextStyle(
                             color = ColorProvider(Color.White),
-                            fontSize = 28.sp,
+                            fontSize = 24.sp,
                             fontWeight = FontWeight.Bold
                         )
                     )
@@ -102,15 +91,13 @@ fun WidgetContent(scanned: Int, matched: Int, isRunning: Boolean) {
                         )
                     )
                 }
-                Column(
-                    modifier = GlanceModifier.defaultWeight(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
+                Spacer(GlanceModifier.height(1.dp).padding(horizontal = 20.dp))
+                Column {
                     Text(
                         matched.toString(),
                         style = TextStyle(
                             color = ColorProvider(Color(0xFF81C784)),
-                            fontSize = 28.sp,
+                            fontSize = 24.sp,
                             fontWeight = FontWeight.Bold
                         )
                     )
