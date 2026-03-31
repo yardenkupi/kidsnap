@@ -1,0 +1,1 @@
+Place facenet.tflite here. Download from: https://github.com/shubham0204/FaceRecognition_With_FaceNet_Android — file goes in app/src/main/assets/facenet.tflite

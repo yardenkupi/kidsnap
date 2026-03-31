@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">קידסנאפ</string>
+    <string name="home_title">קידסנאפ</string>
+    <string name="home_description">שומר אוטומטית תמונות WhatsApp המכילות את ילדך.</string>
+    <string name="set_reference_title">הגדר תמונת ייחוס</string>
+    <string name="set_reference_description">בחר תמונה ברורה של פני ילדך.</string>
+    <string name="matched_photos_title">תמונות שנמצאו</string>
+    <string name="no_matched_photos">אין תמונות שנמצאו עדיין</string>
+    <string name="select_photo">בחר תמונה</string>
+    <string name="use_this_photo">השתמש בתמונה זו</string>
+    <string name="change_reference">החלף תמונת ייחוס</string>
+    <string name="view_matched">צפה בתמונות שנמצאו</string>
+    <string name="service_label">שירות מעקב</string>
+    <string name="threshold_label">רמת דיוק</string>
+    <string name="reference_set">פנים ייחוס הוגדרו</string>
+    <string name="reference_not_set">לא הוגדרה תמונת ייחוס</string>
+    <string name="set_reference_first">הגדר תחילה תמונת ייחוס</string>
+    <string name="processing_face">מעבד פנים&#8230;</string>
+    <string name="face_saved">פנים הייחוס נשמרו בהצלחה!</string>
+    <string name="no_face_detected">לא זוהו פנים. בחר תמונה ברורה יותר.</string>
+    <string name="multiple_faces">זוהו פנים מרובות. בחר תמונה עם פני ילדך בלבד.</string>
+
+    <!-- Navigation & actions -->
+    <string name="set_reference_photo">הגדר תמונת ייחוס</string>
+    <string name="view_matched_photos">צפה בתמונות שנמצאו</string>
+    <string name="start_watching">התחל מעקב</string>
+    <string name="stop_watching">עצור מעקב</string>
+    <string name="service_running">שירות פועל</string>
+    <string name="service_stopped">שירות עצור</string>
+    <string name="select_groups">בחר קבוצות</string>
+    <string name="manage_children">נהל ילדים</string>
+    <string name="matched_photos">תמונות שנמצאו</string>
+    <string name="settings">הגדרות</string>
+    <string name="no_photos_yet">אין תמונות עדיין</string>
+    <string name="no_photos_desc">תמונות של ילדך מ-WhatsApp יופיעו כאן</string>
+    <string name="my_children">הילדים שלי</string>
+    <string name="add_child">הוסף ילד</string>
+    <string name="child_name">שם הילד</string>
+    <string name="pick_photo">בחר תמונה</string>
+    <string name="save">שמור</string>
+    <string name="delete">מחק</string>
+    <string name="cancel">בטל</string>
+    <string name="confirm_delete">האם למחוק?</string>
+    <string name="grant_access">הענק גישה</string>
+    <string name="select_groups_title">בחר קבוצות WhatsApp</string>
+    <string name="done">סיום</string>
+    <string name="scanned">סרוקים</string>
+    <string name="matched">נמצאו</string>
+    <string name="last_match">התאמה אחרונה</string>
+    <string name="never">אף פעם</string>
+    <string name="permissions_title">הרשאות נדרשות</string>
+    <string name="continue_btn">המשך</string>
+    <string name="statistics">סטטיסטיקות</string>
+    <string name="reset_stats">אפס סטטיסטיקות</string>
+    <string name="similarity_threshold">רמת דיוק</string>
+    <string name="dark_mode">מצב כהה</string>
+    <string name="notifications_enabled">התראות</string>
+    <string name="about">אודות</string>
+    <string name="version">גרסה</string>
+    <string name="clear_children">נקה רשימת ילדים</string>
+</resources>

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">KidSnap</string>
+    <string name="home_title">Child Photo Filter</string>
+    <string name="home_description">Automatically saves WhatsApp photos containing your child.</string>
+    <string name="set_reference_title">Set Reference Photo</string>
+    <string name="set_reference_description">Choose a clear photo of your child\'s face.</string>
+    <string name="matched_photos_title">Matched Photos</string>
+    <string name="no_matched_photos">No matched photos yet</string>
+    <string name="select_photo">Select Photo</string>
+    <string name="use_this_photo">Use This Photo</string>
+    <string name="change_reference">Change Reference Photo</string>
+    <string name="view_matched">View Matched Photos</string>
+    <string name="service_label">Watcher Service</string>
+    <string name="threshold_label">Similarity Threshold</string>
+    <string name="reference_set">Reference face set</string>
+    <string name="reference_not_set">No reference photo set</string>
+    <string name="set_reference_first">Set a reference photo first</string>
+    <string name="processing_face">Processing face&#8230;</string>
+    <string name="face_saved">Reference face saved successfully!</string>
+    <string name="no_face_detected">No face detected. Please select a clearer photo.</string>
+    <string name="multiple_faces">Multiple faces detected. Please select a photo with only your child.</string>
+</resources>
