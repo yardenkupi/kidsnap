@@ -10,15 +10,28 @@ import kotlin.math.sqrt
 
 class FaceNetHelper(context: Context) {
 
-    private val interpreter: Interpreter by lazy {
-        Interpreter(FileUtil.loadMappedFile(context, "facenet.tflite"),
-            Interpreter.Options().apply { setNumThreads(2) })
+    private var interpreter: Interpreter? = null
+    var isModelLoaded = false
+        private set
+
+    init {
+        try {
+            interpreter = Interpreter(
+                FileUtil.loadMappedFile(context, "facenet.tflite"),
+                Interpreter.Options().apply { setNumThreads(2) }
+            )
+            isModelLoaded = true
+        } catch (e: Exception) {
+            isModelLoaded = false
+        }
     }
 
     fun getEmbedding(faceBitmap: Bitmap): FloatArray {
+        val interp = interpreter ?: throw IllegalStateException("Face recognition model not loaded. Please contact support.")
         val input = preprocessFace(faceBitmap)
-        val output = Array(1) { FloatArray(128) }
-        interpreter.run(input, output)
+        val embeddingSize = interp.getOutputTensor(0).shape()[1]
+        val output = Array(1) { FloatArray(embeddingSize) }
+        interp.run(input, output)
         return l2Normalize(output[0])
     }
 
@@ -54,5 +67,5 @@ class FaceNetHelper(context: Context) {
         return if (d == 0f) 0f else dot / d
     }
 
-    fun close() = interpreter.close()
+    fun close() = interpreter?.close()
 }

@@ -44,13 +44,16 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Ensure facenet.tflite placeholder exists
+      - name: Download FaceNet TFLite model
         run: |
           mkdir -p app/src/main/assets
-          if [ ! -f app/src/main/assets/facenet.tflite ]; then
-            dd if=/dev/urandom bs=1 count=100 2>/dev/null > app/src/main/assets/facenet.tflite
-            echo "WARNING: Using dummy facenet.tflite - replace with real model for actual face recognition"
-          fi
+          echo "Downloading MobileFaceNet model from MediaPipe..."
+          curl -L --fail --silent \
+            "https://storage.googleapis.com/mediapipe-models/face_embedder/mobilefacenet/float16/1/mobile_face_net.tflite" \
+            -o app/src/main/assets/facenet.tflite && \
+          echo "Model downloaded: $(stat -c%s app/src/main/assets/facenet.tflite) bytes" || \
+          (echo "WARNING: Download failed, using placeholder" && \
+           dd if=/dev/urandom bs=1024 count=512 2>/dev/null > app/src/main/assets/facenet.tflite)
 
       - name: Build Debug APK
         run: ./gradlew assembleDebug --stacktrace

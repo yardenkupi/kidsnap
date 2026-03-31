@@ -9,4 +9,3 @@
 .cxx
 local.properties
 *.db
-app/src/main/assets/facenet.tflite

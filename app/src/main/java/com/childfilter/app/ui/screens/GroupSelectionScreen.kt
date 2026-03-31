@@ -1,8 +1,10 @@
 package com.childfilter.app.ui.screens
 
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.provider.Settings
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -10,27 +12,27 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Info
-import androidx.compose.material3.AlertDialog
+import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -44,6 +46,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationManagerCompat
 import androidx.navigation.NavController
@@ -59,13 +62,15 @@ fun GroupSelectionScreen(navController: NavController) {
 
     val knownGroups by prefs.getKnownGroups().collectAsState(initial = emptySet())
     val selectedGroups by prefs.getSelectedGroups().collectAsState(initial = emptySet())
-
-    var showAddDialog by remember { mutableStateOf(false) }
-    var manualGroupName by remember { mutableStateOf("") }
     var currentSelected by remember(selectedGroups) { mutableStateOf(selectedGroups) }
 
     val enabledListeners = NotificationManagerCompat.getEnabledListenerPackages(context)
     val hasNotificationAccess = enabledListeners.contains(context.packageName)
+
+    val whatsappInstalled = try {
+        context.packageManager.getPackageInfo("com.whatsapp", 0)
+        true
+    } catch (_: PackageManager.NameNotFoundException) { false }
 
     Scaffold(
         topBar = {
@@ -74,6 +79,19 @@ fun GroupSelectionScreen(navController: NavController) {
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    if (knownGroups.isNotEmpty()) {
+                        IconButton(onClick = {
+                            // Reopen this screen to refresh
+                        }) {
+                            Icon(
+                                Icons.Rounded.Refresh,
+                                contentDescription = "Refresh",
+                                tint = MaterialTheme.colorScheme.onPrimary
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -91,161 +109,171 @@ fun GroupSelectionScreen(navController: NavController) {
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Notification access info card
+
+            // Step 1: Notification access
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                colors = CardDefaults.cardColors(
+                    containerColor = if (hasNotificationAccess)
+                        MaterialTheme.colorScheme.primaryContainer
+                    else
+                        MaterialTheme.colorScheme.errorContainer
+                )
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                ) {
+                Column(modifier = Modifier.padding(16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
-                            Icons.Rounded.Info,
+                            if (hasNotificationAccess) Icons.Rounded.CheckCircle else Icons.Rounded.Info,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
+                            tint = if (hasNotificationAccess)
+                                MaterialTheme.colorScheme.primary
+                            else
+                                MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Notification Access",
-                            style = MaterialTheme.typography.titleMedium,
+                            text = if (hasNotificationAccess) "Step 1 ✓ — Notification access granted" else "Step 1 — Grant notification access",
+                            style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.SemiBold
                         )
                     }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = if (hasNotificationAccess)
-                            "Notification access is granted. Group names are automatically detected from WhatsApp notifications."
-                        else
-                            "Grant notification access so the app can automatically detect WhatsApp group names from incoming messages.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
                     if (!hasNotificationAccess) {
                         Spacer(modifier = Modifier.height(8.dp))
-                        FilledTonalButton(
+                        Text(
+                            "Required so the app can detect your WhatsApp group names automatically.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Button(
                             onClick = {
-                                context.startActivity(
-                                    Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
-                                )
+                                context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
                             },
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("Grant Access")
+                            Text("Grant Notification Access")
                         }
                     }
                 }
             }
 
-            // Group list
+            // Step 2: Open WhatsApp to scan
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (knownGroups.isNotEmpty())
+                        MaterialTheme.colorScheme.primaryContainer
+                    else
+                        MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            if (knownGroups.isNotEmpty()) Icons.Rounded.CheckCircle else Icons.Rounded.Info,
+                            contentDescription = null,
+                            tint = if (knownGroups.isNotEmpty())
+                                MaterialTheme.colorScheme.primary
+                            else
+                                MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = if (knownGroups.isNotEmpty())
+                                "Step 2 ✓ — ${knownGroups.size} group(s) detected"
+                            else
+                                "Step 2 — Open WhatsApp to scan groups",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "Open WhatsApp and tap on each group you want to monitor. Groups appear here automatically as you browse them.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    if (hasNotificationAccess && whatsappInstalled) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        FilledTonalButton(
+                            onClick = {
+                                val intent = context.packageManager
+                                    .getLaunchIntentForPackage("com.whatsapp")
+                                if (intent != null) context.startActivity(intent)
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Open WhatsApp")
+                        }
+                    }
+                }
+            }
+
+            // Step 3: Select groups
             val groupList = knownGroups.toList().sorted()
 
-            if (groupList.isEmpty()) {
+            if (groupList.isNotEmpty()) {
                 Text(
-                    text = "No groups detected yet. Groups will appear here once WhatsApp sends notifications.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(vertical = 16.dp)
+                    "Step 3 — Select which groups to monitor:",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold
                 )
-            } else {
-                LazyColumn(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    items(groupList) { group ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Checkbox(
-                                checked = currentSelected.contains(group),
-                                onCheckedChange = { checked ->
-                                    currentSelected = if (checked) {
-                                        currentSelected + group
-                                    } else {
-                                        currentSelected - group
+                Card(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                    LazyColumn(modifier = Modifier.fillMaxSize()) {
+                        items(groupList) { group ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Checkbox(
+                                    checked = currentSelected.contains(group),
+                                    onCheckedChange = { checked ->
+                                        currentSelected = if (checked) {
+                                            currentSelected + group
+                                        } else {
+                                            currentSelected - group
+                                        }
+                                        coroutineScope.launch {
+                                            prefs.saveSelectedGroups(currentSelected)
+                                        }
                                     }
-                                    coroutineScope.launch {
-                                        prefs.saveSelectedGroups(currentSelected)
-                                    }
-                                }
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = group,
-                                style = MaterialTheme.typography.bodyLarge
-                            )
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = group,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                            HorizontalDivider(modifier = Modifier.padding(horizontal = 12.dp))
                         }
                     }
                 }
+            } else if (hasNotificationAccess) {
+                Box(
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        "No groups detected yet.\n\nOpen WhatsApp above and tap on\neach group you want to monitor.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            } else {
+                Spacer(modifier = Modifier.weight(1f))
             }
 
-            // Add manually button
-            OutlinedButton(
-                onClick = { showAddDialog = true },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(Icons.Rounded.Add, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Add Manually")
-            }
-
-            // Done button
             FilledTonalButton(
                 onClick = { navController.popBackStack() },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Done")
+                Text(if (currentSelected.isEmpty()) "Done" else "Done (${currentSelected.size} selected)")
             }
         }
-    }
-
-    // Add manually dialog
-    if (showAddDialog) {
-        AlertDialog(
-            onDismissRequest = {
-                showAddDialog = false
-                manualGroupName = ""
-            },
-            title = { Text("Add Group Manually") },
-            text = {
-                OutlinedTextField(
-                    value = manualGroupName,
-                    onValueChange = { manualGroupName = it },
-                    label = { Text("Group name") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        if (manualGroupName.isNotBlank()) {
-                            coroutineScope.launch {
-                                prefs.addKnownGroup(manualGroupName.trim())
-                            }
-                            manualGroupName = ""
-                            showAddDialog = false
-                        }
-                    }
-                ) {
-                    Text("Add")
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = {
-                        showAddDialog = false
-                        manualGroupName = ""
-                    }
-                ) {
-                    Text("Cancel")
-                }
-            }
-        )
     }
 }
