@@ -109,6 +109,45 @@ fun HomeScreen(navController: NavController) {
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // Setup status banner
+            val isReady = (children.isNotEmpty() || embedding != null) && serviceEnabled
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (isReady) MaterialTheme.colorScheme.primaryContainer
+                    else MaterialTheme.colorScheme.errorContainer
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+            ) {
+                Column(modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(14.dp)) {
+                    Text(
+                        text = if (isReady) "✅  Active — monitoring WhatsApp photos"
+                        else "⚠\uFE0F  Setup not complete",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    if (!isReady) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        val missing = buildList {
+                            if (children.isEmpty() && embedding == null) add("• Add a child (or set a reference photo)")
+                            if (!serviceEnabled) add("• Turn on the Watcher Service below")
+                        }
+                        missing.forEach {
+                            Text(it, style = MaterialTheme.typography.bodySmall)
+                        }
+                    } else if (selectedGroups.isEmpty()) {
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "Tip: select WhatsApp groups to limit which chats are monitored.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                }
+            }
+
             // Stats card
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -120,7 +159,7 @@ fun HomeScreen(navController: NavController) {
                         .padding(20.dp)
                 ) {
                     Text(
-                        text = "Today's Activity",
+                        text = "Activity Stats",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -251,44 +290,46 @@ fun HomeScreen(navController: NavController) {
                 }
             }
 
-            // Reference photo card
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(20.dp)
+            // Reference photo card — only shown when no children are registered (legacy mode)
+            if (children.isEmpty()) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Face,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text(
-                                text = "Reference Photo",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Text(
-                                text = if (embedding != null) "Reference face is set"
-                                else "No reference photo set",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = if (embedding != null) Color(0xFF4CAF50)
-                                else Color(0xFFFF9800)
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(12.dp))
-                    FilledTonalButton(
-                        onClick = { navController.navigate("set_reference") },
-                        modifier = Modifier.fillMaxWidth()
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp)
                     ) {
-                        Text("Set Reference Photo")
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Face,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = "Reference Photo",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Text(
+                                    text = if (embedding != null) "Reference face is set"
+                                    else "No reference photo set",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = if (embedding != null) Color(0xFF4CAF50)
+                                    else Color(0xFFFF9800)
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
+                        FilledTonalButton(
+                            onClick = { navController.navigate("set_reference") },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Set Reference Photo")
+                        }
                     }
                 }
             }

@@ -8,6 +8,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -28,19 +30,25 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 
 class MainActivity : ComponentActivity() {
+
+    // Holds the pending deep-link destination so recomposition can pick it up
+    private val pendingNavigateTo = mutableStateOf<String?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         val prefs = AppPreferences.getInstance(this)
         val hasCompletedOnboarding = runBlocking { prefs.hasCompletedOnboarding().first() }
-        val navigateTo = intent?.getStringExtra("navigate_to")
+        pendingNavigateTo.value = intent?.getStringExtra("navigate_to")
 
         setContent {
             val darkMode by prefs.getDarkMode().collectAsState(initial = false)
+            val navigateTo by pendingNavigateTo
             AppTheme(darkTheme = darkMode) {
                 AppNavigation(
                     hasCompletedOnboarding = hasCompletedOnboarding,
-                    navigateTo = navigateTo
+                    navigateTo = navigateTo,
+                    onNavigateConsumed = { pendingNavigateTo.value = null }
                 )
             }
         }
@@ -49,13 +57,16 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        // Push the new destination into state so the running Compose tree re-navigates
+        pendingNavigateTo.value = intent.getStringExtra("navigate_to")
     }
 }
 
 @Composable
 fun AppNavigation(
     hasCompletedOnboarding: Boolean,
-    navigateTo: String? = null
+    navigateTo: String? = null,
+    onNavigateConsumed: () -> Unit = {}
 ) {
     val navController = rememberNavController()
     val startDestination = if (!hasCompletedOnboarding) "permissions" else "splash"
@@ -75,13 +86,14 @@ fun AppNavigation(
         composable("activity_log") { ActivityLogScreen(navController) }
     }
 
-    // Handle deep navigation from notification tap
+    // Handle deep navigation from notification tap (works for both cold start and onNewIntent)
     if (navigateTo != null) {
         LaunchedEffect(navigateTo) {
             navController.navigate(navigateTo) {
                 popUpTo("home") { inclusive = false }
                 launchSingleTop = true
             }
+            onNavigateConsumed()
         }
     }
 }

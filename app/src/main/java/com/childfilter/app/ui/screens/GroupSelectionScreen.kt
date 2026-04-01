@@ -23,6 +23,7 @@ import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Warning
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -33,6 +34,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -67,6 +69,8 @@ fun GroupSelectionScreen(navController: NavController) {
     val selectedGroups by prefs.getSelectedGroups().collectAsState(initial = emptySet())
     var currentSelected by remember(selectedGroups) { mutableStateOf(selectedGroups) }
     var showPlayProtectHelp by remember { mutableStateOf(true) }
+    var showAddManualDialog by remember { mutableStateOf(false) }
+    var manualGroupName by remember { mutableStateOf("") }
 
     val enabledListeners = NotificationManagerCompat.getEnabledListenerPackages(context)
     val hasNotificationAccess = enabledListeners.contains(context.packageName)
@@ -335,6 +339,13 @@ fun GroupSelectionScreen(navController: NavController) {
                 Spacer(modifier = Modifier.weight(1f))
             }
 
+            TextButton(
+                onClick = { manualGroupName = ""; showAddManualDialog = true },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("+ Add group name manually")
+            }
+
             FilledTonalButton(
                 onClick = { navController.popBackStack() },
                 modifier = Modifier.fillMaxWidth()
@@ -342,5 +353,48 @@ fun GroupSelectionScreen(navController: NavController) {
                 Text(if (currentSelected.isEmpty()) "Done" else "Done (${currentSelected.size} selected)")
             }
         }
+    }
+
+    if (showAddManualDialog) {
+        AlertDialog(
+            onDismissRequest = { showAddManualDialog = false },
+            title = { Text("Add Group Manually") },
+            text = {
+                Column {
+                    Text(
+                        "Type the exact WhatsApp group name as it appears in the app.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = manualGroupName,
+                        onValueChange = { manualGroupName = it },
+                        label = { Text("Group name") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val name = manualGroupName.trim()
+                        if (name.isNotEmpty()) {
+                            coroutineScope.launch {
+                                prefs.addKnownGroup(name)
+                                currentSelected = currentSelected + name
+                                prefs.saveSelectedGroups(currentSelected)
+                            }
+                        }
+                        showAddManualDialog = false
+                    },
+                    enabled = manualGroupName.isNotBlank()
+                ) { Text("Add & Select") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAddManualDialog = false }) { Text("Cancel") }
+            }
+        )
     }
 }
