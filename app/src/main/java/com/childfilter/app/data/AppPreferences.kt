@@ -257,6 +257,11 @@ class AppPreferences(private val context: Context) {
         }
     }
 
+    /** Wipes every key — for unit tests only. */
+    internal suspend fun clearAllForTest() {
+        context.dataStore.edit { it.clear() }
+    }
+
     // ── Activity Log ──
 
     suspend fun addLogEntry(entry: LogEntry) {
