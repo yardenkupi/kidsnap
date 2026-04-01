@@ -66,7 +66,7 @@ fun GroupSelectionScreen(navController: NavController) {
     val knownGroups by prefs.getKnownGroups().collectAsState(initial = emptySet())
     val selectedGroups by prefs.getSelectedGroups().collectAsState(initial = emptySet())
     var currentSelected by remember(selectedGroups) { mutableStateOf(selectedGroups) }
-    var showPlayProtectHelp by remember { mutableStateOf(false) }
+    var showPlayProtectHelp by remember { mutableStateOf(true) }
 
     val enabledListeners = NotificationManagerCompat.getEnabledListenerPackages(context)
     val hasNotificationAccess = enabledListeners.contains(context.packageName)
