@@ -28,7 +28,9 @@ class FaceNetHelper(context: Context) {
 
     fun getEmbedding(faceBitmap: Bitmap): FloatArray {
         val interp = interpreter ?: throw IllegalStateException("Face recognition model not loaded. Please contact support.")
-        val input = preprocessFace(faceBitmap)
+        val inputShape = interp.getInputTensor(0).shape() // [1, H, W, 3]
+        val inputSize = inputShape[1]
+        val input = preprocessFace(faceBitmap, inputSize)
         val embeddingSize = interp.getOutputTensor(0).shape()[1]
         val output = Array(1) { FloatArray(embeddingSize) }
         interp.run(input, output)
@@ -40,8 +42,7 @@ class FaceNetHelper(context: Context) {
 
     fun similarityScore(e1: FloatArray, e2: FloatArray) = cosineSimilarity(e1, e2)
 
-    private fun preprocessFace(bitmap: Bitmap): ByteBuffer {
-        val size = 112
+    private fun preprocessFace(bitmap: Bitmap, size: Int): ByteBuffer {
         val scaled = Bitmap.createScaledBitmap(bitmap, size, size, true)
         val buf = ByteBuffer.allocateDirect(1 * size * size * 3 * 4).apply { order(ByteOrder.nativeOrder()) }
         val pixels = IntArray(size * size)

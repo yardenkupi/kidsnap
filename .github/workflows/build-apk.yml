@@ -44,16 +44,16 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Download FaceNet TFLite model
+      - name: Verify FaceNet TFLite model
         run: |
-          mkdir -p app/src/main/assets
-          echo "Downloading MobileFaceNet model from MediaPipe..."
-          curl -L --fail --silent \
-            "https://storage.googleapis.com/mediapipe-models/face_embedder/mobilefacenet/float16/1/mobile_face_net.tflite" \
-            -o app/src/main/assets/facenet.tflite && \
-          echo "Model downloaded: $(stat -c%s app/src/main/assets/facenet.tflite) bytes" || \
-          (echo "WARNING: Download failed, using placeholder" && \
-           dd if=/dev/urandom bs=1024 count=512 2>/dev/null > app/src/main/assets/facenet.tflite)
+          SIZE=$(stat -c%s app/src/main/assets/facenet.tflite 2>/dev/null || echo 0)
+          echo "Model size: $SIZE bytes"
+          if [ "$SIZE" -lt 1000000 ]; then
+            echo "ERROR: facenet.tflite missing or too small ($SIZE bytes)."
+            echo "The model must be committed to app/src/main/assets/facenet.tflite"
+            exit 1
+          fi
+          echo "Model OK: $SIZE bytes"
 
       - name: Set up signing keystore
         env:

@@ -2,6 +2,7 @@ package com.childfilter.app.ui.screens
 
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.provider.Settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,6 +22,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -33,6 +35,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -63,6 +66,7 @@ fun GroupSelectionScreen(navController: NavController) {
     val knownGroups by prefs.getKnownGroups().collectAsState(initial = emptySet())
     val selectedGroups by prefs.getSelectedGroups().collectAsState(initial = emptySet())
     var currentSelected by remember(selectedGroups) { mutableStateOf(selectedGroups) }
+    var showPlayProtectHelp by remember { mutableStateOf(false) }
 
     val enabledListeners = NotificationManagerCompat.getEnabledListenerPackages(context)
     val hasNotificationAccess = enabledListeners.contains(context.packageName)
@@ -109,6 +113,69 @@ fun GroupSelectionScreen(navController: NavController) {
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+
+            // Play Protect / sideload guidance
+            if (!hasNotificationAccess) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.tertiaryContainer
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(
+                                Icons.Rounded.Warning,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.tertiary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Google Play Protect warning?",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.weight(1f)
+                            )
+                            TextButton(onClick = { showPlayProtectHelp = !showPlayProtectHelp }) {
+                                Text(if (showPlayProtectHelp) "Hide" else "Show steps")
+                            }
+                        }
+                        if (showPlayProtectHelp) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "This app is installed directly (sideloaded), not from the Play Store. " +
+                                    "Google Play Protect may block it or prevent notification access. " +
+                                    "Follow these steps once:",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "1. Open Play Store → tap your profile photo → Play Protect\n" +
+                                    "2. Tap the gear icon (⚙) → turn off \"Scan apps with Play Protect\"\n" +
+                                    "3. Or when prompted \"Unsafe app blocked\" → tap More details → Install anyway\n\n" +
+                                    "Then grant notification access below (Step 1).\n\n" +
+                                    "Samsung devices: Settings → Apps → Special app access → Notification access → KidSnap",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            FilledTonalButton(
+                                onClick = {
+                                    context.startActivity(
+                                        Intent(Intent.ACTION_VIEW, Uri.parse("https://support.google.com/googleplay/answer/2812853"))
+                                    )
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Learn more about Play Protect")
+                            }
+                        }
+                    }
+                }
+            }
 
             // Step 1: Notification access
             Card(

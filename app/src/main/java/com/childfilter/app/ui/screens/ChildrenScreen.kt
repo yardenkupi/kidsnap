@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.contract.ActivityResultContracts.PickMultipleVisualMedia
 import androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
@@ -84,9 +85,11 @@ fun ChildrenScreen(navController: NavController) {
     var showAddDialog by remember { mutableStateOf(false) }
     var childName by remember { mutableStateOf("") }
     var selectedPhotoUri by remember { mutableStateOf<Uri?>(null) }
+    var selectedPhotoCount by remember { mutableStateOf(0) }
     var croppedFaceBitmap by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
     var computedEmbedding by remember { mutableStateOf<FloatArray?>(null) }
     var isProcessing by remember { mutableStateOf(false) }
+    var processingProgress by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     var deleteTarget by remember { mutableStateOf<ChildProfile?>(null) }
@@ -96,39 +99,56 @@ fun ChildrenScreen(navController: NavController) {
     val bottomSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     val galleryLauncher = rememberLauncherForActivityResult(
-        contract = PickVisualMedia()
-    ) { uri: Uri? ->
-        if (uri != null) {
-            selectedPhotoUri = uri
+        contract = PickMultipleVisualMedia(maxItems = 5)
+    ) { uris: List<Uri> ->
+        if (uris.isNotEmpty()) {
+            selectedPhotoUri = uris.first()
+            selectedPhotoCount = uris.size
             croppedFaceBitmap = null
             computedEmbedding = null
             errorMessage = null
             isProcessing = true
+            processingProgress = "Processing 0/${uris.size} photos..."
             coroutineScope.launch {
                 try {
-                    val bitmap = withContext(Dispatchers.IO) {
-                        context.contentResolver.openInputStream(uri)?.use { stream ->
-                            BitmapFactory.decodeStream(stream)
+                    val faceNet = FaceNetHelper(context)
+                    val embeddings = mutableListOf<FloatArray>()
+                    var lastFace: android.graphics.Bitmap? = null
+
+                    for ((index, uri) in uris.withIndex()) {
+                        processingProgress = "Processing ${index + 1}/${uris.size} photos..."
+                        val bitmap = withContext(Dispatchers.IO) {
+                            context.contentResolver.openInputStream(uri)?.use { stream ->
+                                BitmapFactory.decodeStream(stream)
+                            }
+                        }
+                        if (bitmap == null) continue
+                        val faceDetector = FaceDetector()
+                        val faces = faceDetector.detectAndCrop(bitmap)
+                        faceDetector.close()
+                        if (faces.isNotEmpty()) {
+                            val face = faces.first()
+                            embeddings.add(faceNet.getEmbedding(face))
+                            if (lastFace == null) lastFace = face
                         }
                     }
-                    if (bitmap == null) {
-                        errorMessage = "Could not load image"
-                        isProcessing = false
-                        return@launch
-                    }
-                    val faceDetector = FaceDetector()
-                    val faces = faceDetector.detectAndCrop(bitmap)
-                    faceDetector.close()
-                    if (faces.isEmpty()) {
-                        errorMessage = "No face detected in the photo"
-                        isProcessing = false
-                        return@launch
-                    }
-                    val face = faces.first()
-                    croppedFaceBitmap = face
-                    val faceNet = FaceNetHelper(context)
-                    computedEmbedding = faceNet.getEmbedding(face)
                     faceNet.close()
+
+                    if (embeddings.isEmpty()) {
+                        errorMessage = "No face detected in any of the selected photos"
+                        isProcessing = false
+                        return@launch
+                    }
+
+                    croppedFaceBitmap = lastFace
+                    // Average embeddings across all photos for a more robust reference
+                    val size = embeddings[0].size
+                    val averaged = FloatArray(size) { i -> embeddings.sumOf { it[i].toDouble() }.toFloat() / embeddings.size }
+                    // L2-normalize the averaged embedding
+                    val norm = kotlin.math.sqrt(averaged.sumOf { (it * it).toDouble() }.toFloat())
+                    computedEmbedding = if (norm == 0f) averaged else FloatArray(size) { averaged[it] / norm }
+
+                    processingProgress = "Detected faces in ${embeddings.size}/${uris.size} photos"
                     isProcessing = false
                 } catch (e: Exception) {
                     croppedFaceBitmap = null
@@ -136,8 +156,8 @@ fun ChildrenScreen(navController: NavController) {
                     selectedPhotoUri = null
                     errorMessage = when {
                         e.message?.contains("model not loaded", ignoreCase = true) == true ->
-                            "Face recognition is not available in this build. Please download the app again."
-                        else -> "Failed to process photo: ${e.message}"
+                            "Face recognition is not available. Please reinstall the app."
+                        else -> "Failed to process photos: ${e.message}"
                     }
                     isProcessing = false
                 }
@@ -351,11 +371,24 @@ fun ChildrenScreen(navController: NavController) {
                         onClick = { galleryLauncher.launch(PickVisualMediaRequest(PickVisualMedia.ImageOnly)) },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(if (selectedPhotoUri == null) "Select Photo from Gallery" else "Change Photo")
+                        Text(
+                            when {
+                                selectedPhotoUri == null -> "Select Photos from Gallery (up to 5)"
+                                selectedPhotoCount > 1 -> "Change Photos ($selectedPhotoCount selected)"
+                                else -> "Change Photo"
+                            }
+                        )
                     }
                     if (isProcessing) {
                         Text(
-                            text = "Detecting face...",
+                            text = processingProgress.ifEmpty { "Detecting face..." },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    if (!isProcessing && processingProgress.isNotEmpty() && computedEmbedding != null) {
+                        Text(
+                            text = processingProgress,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.primary
                         )
