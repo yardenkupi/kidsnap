@@ -50,7 +50,7 @@ fun WidgetContent(scanned: Int, matched: Int, isRunning: Boolean) {
     Box(
         modifier = GlanceModifier
             .fillMaxSize()
-            .background(ColorProvider(Color(0xFF0D47A1)))
+            .background(ColorProvider(Color(0xFFC4956A)))
             .clickable(actionStartActivity<MainActivity>())
             .padding(16.dp),
         contentAlignment = Alignment.TopStart

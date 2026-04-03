@@ -1,67 +1,142 @@
 package com.childfilter.app.ui.theme
 
 import android.app.Activity
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-// Light palette
-val Purple40 = Color(0xFF6650A4)
-val PurpleGrey40 = Color(0xFF625B71)
-val Blue40 = Color(0xFF3F51B5)
+// ── Nude / warm-earth palette ──────────────────────────────────────────────
 
-// Dark palette — deep blue/purple
-val DarkPrimary = Color(0xFFBB86FC)
-val DarkSecondary = Color(0xFF9E8CDB)
-val DarkTertiary = Color(0xFF7B9CFF)
-val DarkBackground = Color(0xFF121218)
-val DarkSurface = Color(0xFF1E1E2A)
-val DarkOnPrimary = Color(0xFF1A1A2E)
-val DarkOnBackground = Color(0xFFE2E1EC)
-val DarkOnSurface = Color(0xFFE2E1EC)
+// Light mode
+val NudePrimary          = Color(0xFFC4956A)  // warm sand
+val NudeOnPrimary        = Color(0xFFFFFFFF)
+val NudePrimaryContainer = Color(0xFFF5E0C8)  // pale blush
+val NudeOnPrimaryContainer = Color(0xFF3D220A)
 
-private val DarkColorScheme = darkColorScheme(
-    primary = DarkPrimary,
-    secondary = DarkSecondary,
-    tertiary = DarkTertiary,
-    background = DarkBackground,
-    surface = DarkSurface,
-    onPrimary = DarkOnPrimary,
-    onBackground = DarkOnBackground,
-    onSurface = DarkOnSurface
-)
+val NudeSecondary          = Color(0xFFB5896A)  // dusty terracotta
+val NudeOnSecondary        = Color(0xFFFFFFFF)
+val NudeSecondaryContainer = Color(0xFFF0D9C8)
+val NudeOnSecondaryContainer = Color(0xFF3A1E0C)
+
+val NudeTertiary          = Color(0xFFA88B9E)  // dusty mauve
+val NudeOnTertiary        = Color(0xFFFFFFFF)
+val NudeTertiaryContainer = Color(0xFFEBDCE8)
+val NudeOnTertiaryContainer = Color(0xFF2E1A2C)
+
+val NudeBackground   = Color(0xFFFFF8F2)  // warm ivory
+val NudeOnBackground = Color(0xFF2C1A0E)
+
+val NudeSurface         = Color(0xFFFFFAF6)
+val NudeSurfaceVariant  = Color(0xFFF2E4D5)
+val NudeOnSurface       = Color(0xFF2C1A0E)
+val NudeOnSurfaceVariant = Color(0xFF7A5C4A)
+
+val NudeOutline       = Color(0xFFBFA48C)
+val NudeError         = Color(0xFFB55A4A)
+val NudeErrorContainer = Color(0xFFFDEAE5)
+val NudeOnError       = Color(0xFFFFFFFF)
+val NudeOnErrorContainer = Color(0xFF410002)
+
+// Dark mode
+val NudeDarkPrimary          = Color(0xFFD4AA80)  // golden sand
+val NudeDarkOnPrimary        = Color(0xFF3D220A)
+val NudeDarkPrimaryContainer = Color(0xFF5C3A1A)
+val NudeDarkOnPrimaryContainer = Color(0xFFF5D9B5)
+
+val NudeDarkSecondary          = Color(0xFFC8997A)
+val NudeDarkOnSecondary        = Color(0xFF3A1E0C)
+val NudeDarkSecondaryContainer = Color(0xFF55321A)
+val NudeDarkOnSecondaryContainer = Color(0xFFF0CDB0)
+
+val NudeDarkTertiary          = Color(0xFFCDB0C4)
+val NudeDarkOnTertiary        = Color(0xFF2E1A2C)
+val NudeDarkTertiaryContainer = Color(0xFF4A2E46)
+val NudeDarkOnTertiaryContainer = Color(0xFFEBD8E6)
+
+val NudeDarkBackground   = Color(0xFF1C1008)  // deep warm brown
+val NudeDarkOnBackground = Color(0xFFF5E6D5)
+
+val NudeDarkSurface         = Color(0xFF241810)
+val NudeDarkSurfaceVariant  = Color(0xFF3D2C20)
+val NudeDarkOnSurface       = Color(0xFFF5E6D5)
+val NudeDarkOnSurfaceVariant = Color(0xFFCFB49A)
+
+val NudeDarkOutline       = Color(0xFF8C6E58)
+val NudeDarkError         = Color(0xFFCF8A7E)
+val NudeDarkErrorContainer = Color(0xFF6B2218)
+val NudeDarkOnError       = Color(0xFF2C0A06)
+val NudeDarkOnErrorContainer = Color(0xFFF9BFB5)
+
+// ── Color schemes ───────────────────────────────────────────────────────────
 
 private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Blue40
+    primary             = NudePrimary,
+    onPrimary           = NudeOnPrimary,
+    primaryContainer    = NudePrimaryContainer,
+    onPrimaryContainer  = NudeOnPrimaryContainer,
+    secondary           = NudeSecondary,
+    onSecondary         = NudeOnSecondary,
+    secondaryContainer  = NudeSecondaryContainer,
+    onSecondaryContainer = NudeOnSecondaryContainer,
+    tertiary            = NudeTertiary,
+    onTertiary          = NudeOnTertiary,
+    tertiaryContainer   = NudeTertiaryContainer,
+    onTertiaryContainer = NudeOnTertiaryContainer,
+    background          = NudeBackground,
+    onBackground        = NudeOnBackground,
+    surface             = NudeSurface,
+    surfaceVariant      = NudeSurfaceVariant,
+    onSurface           = NudeOnSurface,
+    onSurfaceVariant    = NudeOnSurfaceVariant,
+    outline             = NudeOutline,
+    error               = NudeError,
+    errorContainer      = NudeErrorContainer,
+    onError             = NudeOnError,
+    onErrorContainer    = NudeOnErrorContainer,
 )
+
+private val DarkColorScheme = darkColorScheme(
+    primary             = NudeDarkPrimary,
+    onPrimary           = NudeDarkOnPrimary,
+    primaryContainer    = NudeDarkPrimaryContainer,
+    onPrimaryContainer  = NudeDarkOnPrimaryContainer,
+    secondary           = NudeDarkSecondary,
+    onSecondary         = NudeDarkOnSecondary,
+    secondaryContainer  = NudeDarkSecondaryContainer,
+    onSecondaryContainer = NudeDarkOnSecondaryContainer,
+    tertiary            = NudeDarkTertiary,
+    onTertiary          = NudeDarkOnTertiary,
+    tertiaryContainer   = NudeDarkTertiaryContainer,
+    onTertiaryContainer = NudeDarkOnTertiaryContainer,
+    background          = NudeDarkBackground,
+    onBackground        = NudeDarkOnBackground,
+    surface             = NudeDarkSurface,
+    surfaceVariant      = NudeDarkSurfaceVariant,
+    onSurface           = NudeDarkOnSurface,
+    onSurfaceVariant    = NudeDarkOnSurfaceVariant,
+    outline             = NudeDarkOutline,
+    error               = NudeDarkError,
+    errorContainer      = NudeDarkErrorContainer,
+    onError             = NudeDarkOnError,
+    onErrorContainer    = NudeDarkOnErrorContainer,
+)
+
+// ── Theme composable ────────────────────────────────────────────────────────
 
 @Composable
 fun AppTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
-    }
+    // Dynamic color disabled — always use our nude palette
+    val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
 
     val view = LocalView.current
     if (!view.isInEditMode) {

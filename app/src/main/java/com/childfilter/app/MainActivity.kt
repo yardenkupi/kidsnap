@@ -44,7 +44,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             val darkMode by prefs.getDarkMode().collectAsState(initial = false)
             val navigateTo by pendingNavigateTo
-            AppTheme(darkTheme = darkMode) {
+            AppTheme(darkTheme = darkMode) {  // nude palette — no dynamic color
                 AppNavigation(
                     hasCompletedOnboarding = hasCompletedOnboarding,
                     navigateTo = navigateTo,
