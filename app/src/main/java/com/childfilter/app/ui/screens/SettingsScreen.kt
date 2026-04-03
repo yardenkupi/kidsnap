@@ -288,7 +288,7 @@ fun SettingsScreen(navController: NavController) {
                             fontWeight = FontWeight.SemiBold
                         )
                         Text(
-                            text = "KidSnap v1.0",
+                            text = "KidSnap v${com.childfilter.app.BuildConfig.VERSION_NAME}",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

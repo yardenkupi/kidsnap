@@ -46,7 +46,7 @@ class FolderWatcherService : Service() {
         const val NOTIFICATION_ID = 1
         const val ERROR_NOTIFICATION_ID = 2
         private const val TAG = "FolderWatcher"
-        private const val GROUP_WINDOW_MS = 30000L
+        private const val GROUP_WINDOW_MS = 300000L  // 5 minutes
         private val WHATSAPP_PATHS = listOf(
             "${Environment.getExternalStorageDirectory()}/WhatsApp/Media/WhatsApp Images",
             "${Environment.getExternalStorageDirectory()}/Android/media/com.whatsapp/WhatsApp/Media/WhatsApp Images"
@@ -190,13 +190,7 @@ class FolderWatcherService : Service() {
                 }
             }
 
-            if (!matchFound) {
-                prefs.addLogEntry(LogEntry(
-                    timestamp = System.currentTimeMillis(),
-                    type = "scan",
-                    details = "Scanned ${file.name}"
-                ))
-            }
+            // No-match scans are not logged to keep the activity log signal-to-noise ratio high
         } catch (e: Exception) {
             Log.e(TAG, "Error processing ${file.name}", e)
             prefs.addLogEntry(LogEntry(

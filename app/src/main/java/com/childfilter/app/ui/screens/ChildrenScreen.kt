@@ -68,7 +68,21 @@ import com.childfilter.app.ml.FaceNetHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 import java.util.UUID
+
+/** Copies a content URI image to app-internal storage so the path never expires. */
+private suspend fun persistPhoto(context: android.content.Context, uri: Uri, id: String): String? =
+    withContext(Dispatchers.IO) {
+        try {
+            val dir = File(context.filesDir, "children").also { it.mkdirs() }
+            val dest = File(dir, "$id.jpg")
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                dest.outputStream().use { output -> input.copyTo(output) }
+            }
+            dest.absolutePath
+        } catch (_: Exception) { null }
+    }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -421,13 +435,18 @@ fun ChildrenScreen(navController: NavController) {
                             errorMessage = "Please select a photo with a visible face before saving."
                             return@TextButton
                         }
-                        val profile = ChildProfile(
-                            id = UUID.randomUUID().toString(),
-                            name = childName.trim(),
-                            embedding = emb,
-                            photoUri = selectedPhotoUri?.toString()
-                        )
+                        val childId = UUID.randomUUID().toString()
                         coroutineScope.launch {
+                            // Copy photo to internal storage so the URI never expires
+                            val internalPath = selectedPhotoUri?.let {
+                                persistPhoto(context, it, childId)
+                            }
+                            val profile = ChildProfile(
+                                id = childId,
+                                name = childName.trim(),
+                                embedding = emb,
+                                photoUri = internalPath ?: selectedPhotoUri?.toString()
+                            )
                             prefs.saveChildren(children + profile)
                         }
                         showAddDialog = false

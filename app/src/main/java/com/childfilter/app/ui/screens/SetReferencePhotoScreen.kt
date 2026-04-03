@@ -83,9 +83,9 @@ fun SetReferencePhotoScreen(navController: NavController) {
     var successMessage by remember { mutableStateOf<String?>(null) }
 
     val galleryLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        if (uri == null) return@rememberLauncherForActivityResult
+        contract = ActivityResultContracts.GetMultipleContents()
+    ) { uris: List<Uri> ->
+        if (uris.isEmpty()) return@rememberLauncherForActivityResult
         isProcessing = true
         errorMessage = null
         successMessage = null
@@ -93,35 +93,49 @@ fun SetReferencePhotoScreen(navController: NavController) {
 
         coroutineScope.launch {
             try {
-                val bitmap = withContext(Dispatchers.IO) {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                        val source = ImageDecoder.createSource(context.contentResolver, uri)
-                        ImageDecoder.decodeBitmap(source) { decoder, _, _ ->
-                            decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
-                            decoder.isMutableRequired = true
+                val embeddings = mutableListOf<FloatArray>()
+                var firstFace: android.graphics.Bitmap? = null
+
+                for (uri in uris.take(5)) {
+                    val bitmap = withContext(Dispatchers.IO) {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                            val source = ImageDecoder.createSource(context.contentResolver, uri)
+                            ImageDecoder.decodeBitmap(source) { decoder, _, _ ->
+                                decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
+                                decoder.isMutableRequired = true
+                            }
+                        } else {
+                            @Suppress("DEPRECATION")
+                            MediaStore.Images.Media.getBitmap(context.contentResolver, uri)
                         }
-                    } else {
-                        @Suppress("DEPRECATION")
-                        MediaStore.Images.Media.getBitmap(context.contentResolver, uri)
+                    }
+                    val faces = faceDetector.detectAndCrop(bitmap)
+                    if (faces.isNotEmpty()) {
+                        val face = faces.maxByOrNull { it.width * it.height }!!
+                        if (firstFace == null) firstFace = face
+                        val emb = withContext(Dispatchers.Default) { faceNetHelper.getEmbedding(face) }
+                        embeddings.add(emb)
                     }
                 }
 
-                val faces = faceDetector.detectAndCrop(bitmap)
-                if (faces.isEmpty()) {
-                    errorMessage = "No face detected in the selected photo. Please try another image with a clear, visible face."
+                if (embeddings.isEmpty()) {
+                    errorMessage = "No face detected in any of the selected photos. Please try clearer images."
                     isProcessing = false
                     return@launch
                 }
 
-                // Pick the largest face by area
-                val largestFace = faces.maxByOrNull { it.width * it.height }!!
-                val embedding = withContext(Dispatchers.Default) {
-                    faceNetHelper.getEmbedding(largestFace)
-                }
+                // Average embeddings and L2-normalize for a robust reference
+                val size = embeddings[0].size
+                val averaged = FloatArray(size) { i -> embeddings.sumOf { it[i].toDouble() }.toFloat() / embeddings.size }
+                val norm = kotlin.math.sqrt(averaged.sumOf { (it * it).toDouble() }.toFloat())
+                val finalEmbedding = if (norm == 0f) averaged else FloatArray(size) { averaged[it] / norm }
 
-                prefs.saveEmbedding(embedding)
-                croppedFaceBitmap = largestFace
-                successMessage = "Reference photo set successfully!"
+                prefs.saveEmbedding(finalEmbedding)
+                croppedFaceBitmap = firstFace
+                successMessage = if (uris.size > 1)
+                    "Reference set from ${embeddings.size}/${uris.size} photos — averaged for accuracy!"
+                else
+                    "Reference photo set successfully!"
                 errorMessage = null
             } catch (e: Exception) {
                 errorMessage = "Failed to process photo: ${e.message}"
@@ -251,7 +265,7 @@ fun SetReferencePhotoScreen(navController: NavController) {
 
             // Pick from gallery button
             Button(
-                onClick = { galleryLauncher.launch("image/*") },
+                onClick = { galleryLauncher.launch("image/*") },  // multi-select via GetMultipleContents
                 enabled = !isProcessing,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -264,7 +278,7 @@ fun SetReferencePhotoScreen(navController: NavController) {
                 )
                 Spacer(modifier = Modifier.size(8.dp))
                 Text(
-                    text = "Pick from Gallery",
+                    text = "Pick Photos (up to 5)",
                     style = MaterialTheme.typography.titleMedium
                 )
             }

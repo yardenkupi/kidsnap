@@ -59,4 +59,5 @@
     <string name="about">About</string>
     <string name="version">Version</string>
     <string name="clear_children">Clear All Children</string>
+    <string name="notification_access_description">Detects WhatsApp group names to filter which photos are scanned</string>
 </resources>
