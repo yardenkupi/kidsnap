@@ -3,10 +3,7 @@ package com.childfilter.app.ui.screens
 import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.result.contract.ActivityResultContracts.PickMultipleVisualMedia
-import androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -99,7 +96,10 @@ fun ChildrenScreen(navController: NavController) {
     val bottomSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     val galleryLauncher = rememberLauncherForActivityResult(
-        contract = PickMultipleVisualMedia(maxItems = 5)
+        // GetMultipleContents uses ACTION_GET_CONTENT with EXTRA_ALLOW_MULTIPLE=true,
+        // which works on all Android versions (unlike PickMultipleVisualMedia which
+        // falls back to single-select on many Samsung/OEM devices below API 33).
+        contract = ActivityResultContracts.GetMultipleContents()
     ) { uris: List<Uri> ->
         if (uris.isNotEmpty()) {
             selectedPhotoUri = uris.first()
@@ -368,7 +368,7 @@ fun ChildrenScreen(navController: NavController) {
                         modifier = Modifier.fillMaxWidth()
                     )
                     TextButton(
-                        onClick = { galleryLauncher.launch(PickVisualMediaRequest(PickVisualMedia.ImageOnly)) },
+                        onClick = { galleryLauncher.launch("image/*") },
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
@@ -417,20 +417,22 @@ fun ChildrenScreen(navController: NavController) {
                 TextButton(
                     onClick = {
                         val emb = computedEmbedding
-                        if (childName.isNotBlank() && emb != null) {
-                            val profile = ChildProfile(
-                                id = UUID.randomUUID().toString(),
-                                name = childName.trim(),
-                                embedding = emb,
-                                photoUri = selectedPhotoUri?.toString()
-                            )
-                            coroutineScope.launch {
-                                prefs.saveChildren(children + profile)
-                            }
-                            showAddDialog = false
+                        if (emb == null) {
+                            errorMessage = "Please select a photo with a visible face before saving."
+                            return@TextButton
                         }
+                        val profile = ChildProfile(
+                            id = UUID.randomUUID().toString(),
+                            name = childName.trim(),
+                            embedding = emb,
+                            photoUri = selectedPhotoUri?.toString()
+                        )
+                        coroutineScope.launch {
+                            prefs.saveChildren(children + profile)
+                        }
+                        showAddDialog = false
                     },
-                    enabled = childName.isNotBlank() && computedEmbedding != null && !isProcessing
+                    enabled = childName.isNotBlank() && !isProcessing
                 ) {
                     Text("Save")
                 }
