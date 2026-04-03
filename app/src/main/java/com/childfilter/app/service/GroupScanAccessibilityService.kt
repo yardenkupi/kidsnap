@@ -116,18 +116,19 @@ class GroupScanAccessibilityService : AccessibilityService() {
      * (= conversation name) from each visible list item.
      */
     private fun extractConversationNames(root: AccessibilityNodeInfo): List<String> {
-        val recyclers = root.findAccessibilityNodeInfosByClassName(
-            "androidx.recyclerview.widget.RecyclerView"
-        )
-        if (recyclers.isNullOrEmpty()) return emptyList()
+        // Manual traversal instead of findAccessibilityNodeInfosByClassName to avoid
+        // API compatibility issues across compileSdk versions.
+        val recyclers = mutableListOf<AccessibilityNodeInfo>()
+        collectRecyclerViews(root, recyclers, maxDepth = 8)
+        if (recyclers.isEmpty()) return emptyList()
 
         // Pick the RecyclerView with the most children — that's the conversation list,
         // not a small emoji grid or picker
-        val conversationList = recyclers.maxByOrNull { it.childCount } ?: return emptyList()
-        if (conversationList.childCount < MIN_ITEMS_FOR_TRUST) return emptyList()
+        val conversationList = recyclers.maxByOrNull { it.getChildCount() } ?: return emptyList()
+        if (conversationList.getChildCount() < MIN_ITEMS_FOR_TRUST) return emptyList()
 
         val candidates = mutableListOf<String>()
-        for (i in 0 until conversationList.childCount) {
+        for (i in 0 until conversationList.getChildCount()) {
             val item = conversationList.getChild(i) ?: continue
             val name = firstValidName(item, maxDepth = 6) ?: continue
             candidates.add(name)
@@ -139,6 +140,25 @@ class GroupScanAccessibilityService : AccessibilityService() {
     }
 
     /**
+     * Recursively collects all RecyclerView nodes beneath [node], stopping descent
+     * once a RecyclerView is found (its internal children are list items, not containers).
+     */
+    private fun collectRecyclerViews(
+        node: AccessibilityNodeInfo?,
+        result: MutableList<AccessibilityNodeInfo>,
+        maxDepth: Int
+    ) {
+        if (node == null || maxDepth <= 0) return
+        if (node.className?.contains("RecyclerView") == true) {
+            result.add(node)
+            return  // don't descend into the RecyclerView's own children
+        }
+        for (i in 0 until node.getChildCount()) {
+            collectRecyclerViews(node.getChild(i), result, maxDepth - 1)
+        }
+    }
+
+    /**
      * Depth-first search for the first text in [node] that looks like a conversation name.
      */
     private fun firstValidName(node: AccessibilityNodeInfo?, maxDepth: Int): String? {
@@ -147,7 +167,7 @@ class GroupScanAccessibilityService : AccessibilityService() {
         val text = node.text?.toString()?.trim()
         if (!text.isNullOrBlank() && looksLikeName(text)) return text
 
-        for (i in 0 until node.childCount) {
+        for (i in 0 until node.getChildCount()) {
             val result = firstValidName(node.getChild(i), maxDepth - 1)
             if (result != null) return result
         }
