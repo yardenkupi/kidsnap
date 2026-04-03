@@ -1,0 +1,140 @@
+name: Claude Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main, master]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  review:
+    name: Claude Code Review
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get PR diff
+        run: |
+          git diff origin/${{ github.base_ref }}...HEAD > pr_diff.txt
+          BYTES=$(wc -c < pr_diff.txt)
+          echo "Diff size: $BYTES bytes"
+          # Warn if very large
+          if [ "$BYTES" -gt 100000 ]; then
+            echo "⚠️  Large diff ($BYTES bytes) — will be truncated to 80 KB for review."
+          fi
+
+      - name: Run Claude Code Review
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          python3 << 'PYEOF'
+          import os, json, urllib.request, urllib.error, sys, textwrap
+
+          diff = open("pr_diff.txt").read()
+          truncated = len(diff) > 80000
+          diff = diff[:80000]
+
+          truncation_note = (
+              "\n\n> ⚠️ **Diff truncated** — only the first 80 KB was reviewed."
+              if truncated else ""
+          )
+
+          prompt = textwrap.dedent(f"""
+              You are a senior Android / Kotlin developer conducting a code review for the \
+          **KidSnap** app (Jetpack Compose, ML face recognition, WhatsApp photo monitoring).
+
+              Review the diff below and produce a structured markdown report with these sections:
+
+              ## Summary
+              One short paragraph describing what the PR does.
+
+              ## Issues
+              List any bugs, logic errors, edge cases, or crashes. Mark each as 🔴 Critical, \
+          🟡 Minor, or 🔵 Nitpick. If none, say "No issues found."
+
+              ## Security
+              Flag any security concerns (data leaks, permission misuse, insecure storage, \
+          injection risks). If none, say "No concerns."
+
+              ## Code Quality
+              Comment on readability, naming, test coverage gaps, dead code, or missing \
+          null-safety. Keep it concise.
+
+              ## Verdict
+              End with one of:
+              - ✅ **APPROVE** — ready to merge
+              - 🔁 **REQUEST CHANGES** — issues must be fixed first
+              - 💬 **COMMENT** — informational, no blocking issues
+
+              ---
+
+              ```diff
+              {diff}
+              ```
+              {truncation_note}
+          """).strip()
+
+          payload = {
+              "model": "claude-sonnet-4-6",
+              "max_tokens": 4096,
+              "messages": [{"role": "user", "content": prompt}]
+          }
+
+          req = urllib.request.Request(
+              "https://api.anthropic.com/v1/messages",
+              data=json.dumps(payload).encode(),
+              headers={
+                  "x-api-key": os.environ["ANTHROPIC_API_KEY"],
+                  "anthropic-version": "2023-06-01",
+                  "content-type": "application/json",
+              },
+          )
+
+          try:
+              with urllib.request.urlopen(req, timeout=120) as resp:
+                  result = json.loads(resp.read())
+              review = result["content"][0]["text"]
+          except urllib.error.HTTPError as e:
+              body = e.read().decode()
+              print(f"API error {e.code}: {body}", file=sys.stderr)
+              review = (
+                  "## ⚠️ Code Review Unavailable\n\n"
+                  f"Claude API returned an error (`{e.code}`). "
+                  "Please review this PR manually.\n\n"
+                  f"<details><summary>Error details</summary>\n\n```\n{body}\n```\n</details>"
+              )
+
+          header = (
+              "<!-- claude-code-review -->\n"
+              "## 🤖 Claude Code Review\n\n"
+          )
+          open("review.md", "w").write(header + review)
+          print(review)
+          PYEOF
+
+      - name: Delete previous Claude review comment (if any)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Remove old bot review so only the latest appears
+          COMMENT_IDS=$(gh api \
+            repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments \
+            --jq '.[] | select(.body | startswith("<!-- claude-code-review -->")) | .id')
+          for ID in $COMMENT_IDS; do
+            gh api --method DELETE \
+              repos/${{ github.repository }}/issues/comments/$ID || true
+          done
+
+      - name: Post review comment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr comment ${{ github.event.pull_request.number }} \
+            --body-file review.md

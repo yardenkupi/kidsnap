@@ -51,6 +51,25 @@
             </intent-filter>
         </service>
 
+        <!--
+            GroupScanAccessibilityService — reads WhatsApp's conversation list to collect
+            group names that have notifications completely disabled. Only activated by the
+            user on Android < 12; on Android 12+ the notification channel API is used instead.
+        -->
+        <service
+            android:name=".service.GroupScanAccessibilityService"
+            android:exported="true"
+            android:label="@string/accessibility_service_label"
+            android:description="@string/accessibility_service_description"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/group_scan_accessibility_config" />
+        </service>
+
         <receiver
             android:name=".receiver.BootReceiver"
             android:exported="true">

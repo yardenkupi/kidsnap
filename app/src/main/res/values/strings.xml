@@ -60,4 +60,6 @@
     <string name="version">Version</string>
     <string name="clear_children">Clear All Children</string>
     <string name="notification_access_description">Detects WhatsApp group names to filter which photos are scanned</string>
+    <string name="accessibility_service_label">KidSnap Group Scanner</string>
+    <string name="accessibility_service_description">Reads WhatsApp\'s conversation list to import group names — including groups with notifications turned off. Only conversation names are read; no messages or media are accessed.</string>
 </resources>
