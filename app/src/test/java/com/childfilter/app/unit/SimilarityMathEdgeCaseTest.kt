@@ -148,7 +148,7 @@ class SimilarityMathEdgeCaseTest {
     @Test
     fun `two all-negative vectors have positive cosine similarity`() {
         val a = floatArrayOf(-1f, -2f, -3f)
-        val b = floatArrayOf(-4f, -5f, -6f)
+        val b = floatArrayOf(-2f, -4f, -6f) // b = 2*a, exactly parallel
         val score = cosineSimilarity(a, b)
         assertTrue("Two all-negative same-direction vectors should have positive similarity", score > 0f)
         assertEquals(1.0f, score, 0.001f) // same direction
