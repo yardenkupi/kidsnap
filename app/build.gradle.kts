@@ -11,8 +11,8 @@ android {
         applicationId = "com.childfilter.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 4
-        versionName = "1.3"
+        versionCode = 5
+        versionName = "1.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -70,6 +70,13 @@ android {
 
     testOptions {
         animationsDisabled = true
+    }
+
+    androidResources {
+        // TFLite models must NOT be compressed in the APK so they can be
+        // memory-mapped directly by FileUtil.loadMappedFile. Without this,
+        // the Interpreter constructor silently fails and isModelLoaded = false.
+        noCompress += "tflite"
     }
 
     packaging {
