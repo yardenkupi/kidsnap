@@ -135,7 +135,7 @@ class NotificationGroupDetectionTest {
     }
 
     @Test
-    fun `message with time like 3:00 is NOT group`() {
+    fun `message with time like 3h00 is NOT group`() {
         assertFalse(isGroupMessage("Meet at 3:00pm", false))
     }
 
