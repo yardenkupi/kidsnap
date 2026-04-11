@@ -28,6 +28,10 @@ class NotificationWatcherService : NotificationListenerService() {
         private val _isScanning = MutableStateFlow(false)
         val isScanning: StateFlow<Boolean> = _isScanning.asStateFlow()
 
+        // Reactive connection state so the UI can observe it
+        private val _isConnected = MutableStateFlow(false)
+        val isConnected: StateFlow<Boolean> = _isConnected.asStateFlow()
+
         @Volatile
         private var instance: NotificationWatcherService? = null
 
@@ -35,9 +39,6 @@ class NotificationWatcherService : NotificationListenerService() {
         fun triggerFullScan() {
             instance?.performFullScan()
         }
-
-        /** True when the notification listener is active and connected. */
-        fun isConnected(): Boolean = instance != null
     }
 
     // ── Lifecycle ────────────────────────────────────────────────────────────
@@ -45,6 +46,7 @@ class NotificationWatcherService : NotificationListenerService() {
     override fun onListenerConnected() {
         super.onListenerConnected()
         instance = this
+        _isConnected.value = true
         // Auto-scan immediately so the group list populates as soon as access is granted
         performFullScan()
     }
@@ -52,11 +54,13 @@ class NotificationWatcherService : NotificationListenerService() {
     override fun onListenerDisconnected() {
         super.onListenerDisconnected()
         instance = null
+        _isConnected.value = false
         _isScanning.value = false
     }
 
     override fun onDestroy() {
         instance = null
+        _isConnected.value = false
         _isScanning.value = false
         scope.cancel()
         super.onDestroy()

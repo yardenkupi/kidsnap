@@ -2,7 +2,6 @@ package com.childfilter.app.ui.screens
 
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
@@ -38,6 +37,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -83,13 +83,8 @@ fun GroupSelectionScreen(navController: NavController) {
     val enabledListeners = NotificationManagerCompat.getEnabledListenerPackages(context)
     val hasNotificationAccess = enabledListeners.contains(context.packageName)
 
-    val whatsappInstalled = try {
-        context.packageManager.getPackageInfo("com.whatsapp", 0)
-        true
-    } catch (_: PackageManager.NameNotFoundException) { false }
-
     // On Android < 12, check if our accessibility service is enabled.
-    // (On Android 12+, getNotificationChannels() covers muted groups — no a11y needed.)
+    // (On Android 12+, getNotificationChannels() covers muted groups -- no a11y needed.)
     val needsA11yService = Build.VERSION.SDK_INT < Build.VERSION_CODES.S
     val a11yEnabled = remember(Unit) {
         if (!needsA11yService) true  // not needed on API 31+
@@ -120,16 +115,7 @@ fun GroupSelectionScreen(navController: NavController) {
                 actions = {
                     if (hasNotificationAccess) {
                         IconButton(
-                            onClick = {
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                                    NotificationWatcherService.triggerFullScan()
-                                } else if (whatsappInstalled) {
-                                    // Older Android: open WhatsApp so accessibility service scans
-                                    val intent = context.packageManager
-                                        .getLaunchIntentForPackage("com.whatsapp")
-                                    if (intent != null) context.startActivity(intent)
-                                }
-                            },
+                            onClick = { NotificationWatcherService.triggerFullScan() },
                             enabled = !isScanning
                         ) {
                             if (isScanning) {
@@ -204,11 +190,11 @@ fun GroupSelectionScreen(navController: NavController) {
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "1. Open Play Store → tap your profile photo → Play Protect\n" +
-                                    "2. Tap the gear icon (⚙) → turn off \"Scan apps with Play Protect\"\n" +
-                                    "3. Or when prompted \"Unsafe app blocked\" → tap More details → Install anyway\n\n" +
+                                text = "1. Open Play Store \u2192 tap your profile photo \u2192 Play Protect\n" +
+                                    "2. Tap the gear icon (\u2699) \u2192 turn off \"Scan apps with Play Protect\"\n" +
+                                    "3. Or when prompted \"Unsafe app blocked\" \u2192 tap More details \u2192 Install anyway\n\n" +
                                     "Then grant notification access below (Step 1).\n\n" +
-                                    "Samsung devices: Settings → Apps → Special app access → Notification access → KidSnap",
+                                    "Samsung devices: Settings \u2192 Apps \u2192 Special app access \u2192 Notification access \u2192 KidSnap",
                                 style = MaterialTheme.typography.bodySmall
                             )
                             Spacer(modifier = Modifier.height(8.dp))
@@ -381,32 +367,23 @@ fun GroupSelectionScreen(navController: NavController) {
 
                     if (hasNotificationAccess) {
                         val scanNote = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
-                            "All your WhatsApp groups are imported automatically from your notification history."
+                            "All your WhatsApp groups are imported automatically from notification channels."
                         else
-                            "Groups are detected from your WhatsApp notifications. If any are missing, open WhatsApp and browse those groups."
+                            "Groups are detected from notifications and the accessibility scanner. Tap refresh to scan again."
                         Text(
                             text = scanNote,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
 
-                        // Fallback: open WhatsApp button for older devices or when list is empty
-                        if (!isScanning && (knownGroups.isEmpty() || Build.VERSION.SDK_INT < Build.VERSION_CODES.S)) {
-                            if (whatsappInstalled) {
-                                Spacer(modifier = Modifier.height(8.dp))
-                                FilledTonalButton(
-                                    onClick = {
-                                        val intent = context.packageManager
-                                            .getLaunchIntentForPackage("com.whatsapp")
-                                        if (intent != null) context.startActivity(intent)
-                                    },
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Text(
-                                        if (knownGroups.isEmpty()) "Open WhatsApp to load groups"
-                                        else "Open WhatsApp (add more groups)"
-                                    )
-                                }
+                        // Refresh button inside the card for easy access
+                        if (!isScanning && knownGroups.isEmpty()) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            FilledTonalButton(
+                                onClick = { NotificationWatcherService.triggerFullScan() },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Refresh Scan")
                             }
                         }
                     }
@@ -422,6 +399,36 @@ fun GroupSelectionScreen(navController: NavController) {
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold
                 )
+
+                // Select All / Deselect All buttons
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = {
+                            currentSelected = knownGroups.toSet()
+                            coroutineScope.launch {
+                                prefs.saveSelectedGroups(currentSelected)
+                            }
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Select All")
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            currentSelected = emptySet()
+                            coroutineScope.launch {
+                                prefs.saveSelectedGroups(currentSelected)
+                            }
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Deselect All")
+                    }
+                }
+
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -467,10 +474,10 @@ fun GroupSelectionScreen(navController: NavController) {
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
-                            "No groups found.\n\nMake sure you have joined WhatsApp groups\nand that WhatsApp has sent at least\none notification on this device."
-                        else
-                            "No groups detected yet.\n\nOpen WhatsApp above and browse\nthe groups you want to monitor.",
+                        text = "No groups detected yet.\n\n" +
+                            "Make sure notification access is granted\n" +
+                            "and WhatsApp is installed with at least\n" +
+                            "one group conversation.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center
