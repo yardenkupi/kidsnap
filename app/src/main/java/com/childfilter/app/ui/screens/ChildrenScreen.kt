@@ -103,6 +103,8 @@ fun ChildrenScreen(navController: NavController) {
     var processingProgress by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
+    var photoFeedback by remember { mutableStateOf<String?>(null) }
+
     var deleteTarget by remember { mutableStateOf<ChildProfile?>(null) }
 
     // Bottom sheet state
@@ -121,6 +123,7 @@ fun ChildrenScreen(navController: NavController) {
             croppedFaceBitmap = null
             computedEmbedding = null
             errorMessage = null
+            photoFeedback = null
             isProcessing = true
             processingProgress = "Processing 0/${uris.size} photos..."
             coroutineScope.launch {
@@ -137,19 +140,57 @@ fun ChildrenScreen(navController: NavController) {
                             }
                         }
                         if (bitmap == null) continue
-                        val faceDetector = FaceDetector()
-                        val faces = faceDetector.detectAndCrop(bitmap)
-                        faceDetector.close()
-                        if (faces.isNotEmpty()) {
-                            val face = faces.first()
-                            embeddings.add(faceNet.getEmbedding(face))
-                            if (lastFace == null) lastFace = face
+
+                        val detector = FaceDetector()
+                        val rawFaces = detector.detectFacesRaw(bitmap)
+                        val imageArea = bitmap.width.toLong() * bitmap.height.toLong()
+
+                        if (rawFaces.isEmpty()) {
+                            // Only show feedback for the first photo if single photo
+                            if (uris.size == 1) {
+                                photoFeedback = "No face found. Try a well-lit, front-facing photo."
+                            }
+                            detector.close()
+                            continue
+                        }
+
+                        if (rawFaces.size > 1 && uris.size == 1) {
+                            photoFeedback = "Multiple faces found. Please use a photo with only your child's face."
+                        }
+
+                        // Pick the largest face by bounding box area
+                        val largestRawFace = rawFaces.maxByOrNull {
+                            it.boundingBox.width() * it.boundingBox.height()
+                        }!!
+
+                        // Quality feedback based on face area ratio (for single photos)
+                        if (uris.size == 1 && rawFaces.size <= 1) {
+                            val faceBox = largestRawFace.boundingBox
+                            val faceArea = faceBox.width().toLong() * faceBox.height().toLong()
+                            val ratio = faceArea.toFloat() / imageArea.toFloat()
+                            photoFeedback = when {
+                                ratio > 0.15f -> "Great photo! Face detected clearly."
+                                ratio > 0.05f -> "Face detected, but try a closer photo for better results."
+                                else -> "Face detected but very small. A closer photo will improve accuracy."
+                            }
+                        }
+
+                        // Use the largest face crop for embedding
+                        val largestCrop = detector.detectLargestFace(bitmap)
+                        detector.close()
+
+                        if (largestCrop != null) {
+                            embeddings.add(faceNet.getEmbedding(largestCrop))
+                            if (lastFace == null) lastFace = largestCrop
                         }
                     }
                     faceNet.close()
 
                     if (embeddings.isEmpty()) {
                         errorMessage = "No face detected in any of the selected photos"
+                        if (photoFeedback == null) {
+                            photoFeedback = "No face found. Try a well-lit, front-facing photo."
+                        }
                         isProcessing = false
                         return@launch
                     }
@@ -168,6 +209,7 @@ fun ChildrenScreen(navController: NavController) {
                     croppedFaceBitmap = null
                     computedEmbedding = null
                     selectedPhotoUri = null
+                    photoFeedback = null
                     errorMessage = when {
                         e.message?.contains("model not loaded", ignoreCase = true) == true ->
                             "Face recognition is not available. Please reinstall the app."
@@ -204,6 +246,7 @@ fun ChildrenScreen(navController: NavController) {
                     croppedFaceBitmap = null
                     computedEmbedding = null
                     errorMessage = null
+                    photoFeedback = null
                     isProcessing = false
                 }
             ) {
@@ -412,6 +455,17 @@ fun ChildrenScreen(navController: NavController) {
                             text = errorMessage!!,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                    if (photoFeedback != null && !isProcessing) {
+                        Text(
+                            text = photoFeedback!!,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = when {
+                                photoFeedback!!.startsWith("Great") -> MaterialTheme.colorScheme.primary
+                                photoFeedback!!.startsWith("No face") || photoFeedback!!.startsWith("Multiple") -> MaterialTheme.colorScheme.error
+                                else -> MaterialTheme.colorScheme.onSurfaceVariant
+                            }
                         )
                     }
                     if (croppedFaceBitmap != null) {

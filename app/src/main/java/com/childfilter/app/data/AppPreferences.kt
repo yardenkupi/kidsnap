@@ -265,10 +265,10 @@ class AppPreferences(private val context: Context) {
     // ── Activity Log ──
 
     suspend fun addLogEntry(entry: LogEntry) {
-        addLogEntry(entry.type, entry.details)
+        addLogEntry(entry.type, entry.details, entry.confidence)
     }
 
-    suspend fun addLogEntry(type: String, details: String) {
+    suspend fun addLogEntry(type: String, details: String, confidence: String? = null) {
         context.dataStore.edit { prefs ->
             val existing = prefs[ACTIVITY_LOG] ?: "[]"
             val array = try { JSONArray(existing) } catch (_: Exception) { JSONArray() }
@@ -276,6 +276,7 @@ class AppPreferences(private val context: Context) {
                 put("timestamp", System.currentTimeMillis())
                 put("type", type)
                 put("details", details)
+                if (confidence != null) put("confidence", confidence)
             }
             // Prepend: build a new array with entry first
             val newArray = JSONArray()
@@ -300,7 +301,8 @@ class AppPreferences(private val context: Context) {
                         LogEntry(
                             timestamp = obj.getLong("timestamp"),
                             type = obj.getString("type"),
-                            details = obj.getString("details")
+                            details = obj.getString("details"),
+                            confidence = if (obj.has("confidence")) obj.getString("confidence") else null
                         )
                     )
                 } catch (_: Exception) { /* skip malformed */ }
