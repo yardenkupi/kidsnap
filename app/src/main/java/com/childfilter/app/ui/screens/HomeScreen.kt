@@ -18,7 +18,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.rounded.Groups
@@ -290,46 +289,44 @@ fun HomeScreen(navController: NavController) {
                 }
             }
 
-            // Reference photo card — only shown when no children are registered (legacy mode)
-            if (children.isEmpty()) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            // My Children card — unified entry point for child management + reference photos
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp)
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(20.dp)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.Face,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Rounded.People,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                text = "My Children",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold
                             )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column {
-                                Text(
-                                    text = "Reference Photo",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                                Text(
-                                    text = if (embedding != null) "Reference face is set"
-                                    else "No reference photo set",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = if (embedding != null) Color(0xFF4CAF50)
-                                    else Color(0xFFFF9800)
-                                )
-                            }
+                            Text(
+                                text = if (children.isEmpty()) "No children registered"
+                                else "${children.size} child${if (children.size != 1) "ren" else ""} registered",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (children.isNotEmpty()) Color(0xFF4CAF50)
+                                else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
-                        Spacer(modifier = Modifier.height(12.dp))
-                        FilledTonalButton(
-                            onClick = { navController.navigate("set_reference") },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("Set Reference Photo")
-                        }
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                    FilledTonalButton(
+                        onClick = { navController.navigate("children") },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Manage Children")
                     }
                 }
             }
@@ -438,48 +435,6 @@ fun HomeScreen(navController: NavController) {
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text("Choose Groups")
-                    }
-                }
-            }
-
-            // Manage Children card
-            ElevatedCard(
-                modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(20.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Rounded.People,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text(
-                                text = "Manage Children",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Text(
-                                text = if (children.isEmpty()) "No children added"
-                                else "${children.size} child${if (children.size != 1) "ren" else ""} registered",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = if (children.isNotEmpty()) Color(0xFF4CAF50)
-                                else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(12.dp))
-                    FilledTonalButton(
-                        onClick = { navController.navigate("children") },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Manage Children")
                     }
                 }
             }

@@ -219,7 +219,7 @@ fun ChildrenScreen(navController: NavController) {
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "No children added yet.\nTap + to add your child's face.",
+                    text = "No children added yet.\nTap + to add your first child.",
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center

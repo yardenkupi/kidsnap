@@ -42,6 +42,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -118,10 +120,14 @@ fun MatchedPhotosScreen(navController: NavController) {
     // Face comparison sheet state
     var comparisonPhoto by remember { mutableStateOf<Uri?>(null) }
 
-    // Collect children for reference photo
+    // Collect children for reference photo and per-child filtering
     val prefs = AppPreferences.getInstance(context)
     val children by prefs.getChildren().collectAsState(initial = emptyList())
     val referenceUri: Uri? = children.firstOrNull()?.photoUri?.let { Uri.parse(it) }
+    val matchedPhotoRecords by prefs.getMatchedPhotoRecords().collectAsState(initial = emptyMap())
+
+    // Per-child tab state: 0 = "All", 1..N = per child
+    var selectedChildTab by remember { mutableStateOf(0) }
 
     // Exit selection mode on back press
     BackHandler(enabled = selectionMode) {
@@ -173,6 +179,13 @@ fun MatchedPhotosScreen(navController: NavController) {
     // -----------------------------------------------------------------------
     // Derived: filtered + sorted list
     // -----------------------------------------------------------------------
+    // Build tab titles: "All" + one per child name
+    val childTabNames by remember(children) {
+        derivedStateOf {
+            listOf("All") + children.map { it.name }
+        }
+    }
+
     val filteredPhotos by remember {
         derivedStateOf {
             val now = LocalDate.now(ZoneId.systemDefault())
@@ -198,7 +211,15 @@ fun MatchedPhotosScreen(navController: NavController) {
                     DateFilter.THIS_MONTH -> !photoDate.isBefore(monthStart)
                 }
 
-                matchesSearch && matchesDate
+                // Per-child filter: tab 0 = "All", tab N = child at index N-1
+                val matchesChild = if (selectedChildTab == 0) {
+                    true
+                } else {
+                    val targetChild = children.getOrNull(selectedChildTab - 1)?.name
+                    targetChild != null && matchedPhotoRecords[photo.displayName] == targetChild
+                }
+
+                matchesSearch && matchesDate && matchesChild
             }
 
             when (sortOrder) {
@@ -345,6 +366,24 @@ fun MatchedPhotosScreen(navController: NavController) {
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
+
+            // ----------------------------------------------------------------
+            // Per-child tabs
+            // ----------------------------------------------------------------
+            if (children.isNotEmpty()) {
+                ScrollableTabRow(
+                    selectedTabIndex = selectedChildTab.coerceIn(0, childTabNames.lastIndex),
+                    edgePadding = 12.dp
+                ) {
+                    childTabNames.forEachIndexed { index, title ->
+                        Tab(
+                            selected = selectedChildTab == index,
+                            onClick = { selectedChildTab = index },
+                            text = { Text(title) }
+                        )
+                    }
+                }
+            }
 
             // ----------------------------------------------------------------
             // Search bar
