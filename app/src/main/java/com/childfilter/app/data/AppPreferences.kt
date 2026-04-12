@@ -35,6 +35,7 @@ class AppPreferences(private val context: Context) {
         private val NOTIFICATIONS_ENABLED = booleanPreferencesKey("notifications_enabled")
         private val HAS_SEEN_TUTORIAL = booleanPreferencesKey("has_seen_tutorial")
         private val ACTIVITY_LOG = stringPreferencesKey("activity_log")
+        private val MATCHED_PHOTOS_JSON = stringPreferencesKey("matched_photos_json")
 
         @Volatile
         private var instance: AppPreferences? = null
@@ -265,10 +266,10 @@ class AppPreferences(private val context: Context) {
     // ── Activity Log ──
 
     suspend fun addLogEntry(entry: LogEntry) {
-        addLogEntry(entry.type, entry.details)
+        addLogEntry(entry.type, entry.details, entry.childName)
     }
 
-    suspend fun addLogEntry(type: String, details: String) {
+    suspend fun addLogEntry(type: String, details: String, childName: String? = null) {
         context.dataStore.edit { prefs ->
             val existing = prefs[ACTIVITY_LOG] ?: "[]"
             val array = try { JSONArray(existing) } catch (_: Exception) { JSONArray() }
@@ -276,6 +277,7 @@ class AppPreferences(private val context: Context) {
                 put("timestamp", System.currentTimeMillis())
                 put("type", type)
                 put("details", details)
+                if (childName != null) put("childName", childName)
             }
             // Prepend: build a new array with entry first
             val newArray = JSONArray()
@@ -300,9 +302,51 @@ class AppPreferences(private val context: Context) {
                         LogEntry(
                             timestamp = obj.getLong("timestamp"),
                             type = obj.getString("type"),
-                            details = obj.getString("details")
+                            details = obj.getString("details"),
+                            childName = if (obj.has("childName")) obj.getString("childName") else null
                         )
                     )
+                } catch (_: Exception) { /* skip malformed */ }
+            }
+            result
+        }
+    }
+
+    // ── Matched photo records (tracks which child matched each saved photo) ──
+
+    suspend fun addMatchedPhotoRecord(displayName: String, childName: String?) {
+        context.dataStore.edit { prefs ->
+            val existing = prefs[MATCHED_PHOTOS_JSON] ?: "[]"
+            val array = try { JSONArray(existing) } catch (_: Exception) { JSONArray() }
+            val obj = JSONObject().apply {
+                put("displayName", displayName)
+                put("timestamp", System.currentTimeMillis())
+                if (childName != null) put("childName", childName)
+            }
+            array.put(obj)
+            // Keep a maximum of 500 records
+            val newArray = if (array.length() > 500) {
+                val trimmed = JSONArray()
+                for (i in (array.length() - 500) until array.length()) {
+                    trimmed.put(array.getJSONObject(i))
+                }
+                trimmed
+            } else array
+            prefs[MATCHED_PHOTOS_JSON] = newArray.toString()
+        }
+    }
+
+    fun getMatchedPhotoRecords(): Flow<Map<String, String?>> {
+        return context.dataStore.data.map { prefs ->
+            val raw = prefs[MATCHED_PHOTOS_JSON] ?: return@map emptyMap()
+            val array = try { JSONArray(raw) } catch (_: Exception) { return@map emptyMap<String, String?>() }
+            val result = mutableMapOf<String, String?>()
+            for (i in 0 until array.length()) {
+                try {
+                    val obj = array.getJSONObject(i)
+                    val name = obj.getString("displayName")
+                    val child = if (obj.has("childName")) obj.getString("childName") else null
+                    result[name] = child
                 } catch (_: Exception) { /* skip malformed */ }
             }
             result

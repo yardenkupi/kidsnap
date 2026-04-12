@@ -24,11 +24,14 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,6 +42,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -54,7 +58,32 @@ fun ActivityLogScreen(navController: NavController) {
     val coroutineScope = rememberCoroutineScope()
 
     val log by prefs.getActivityLog().collectAsState(initial = emptyList())
+    val children by prefs.getChildren().collectAsState(initial = emptyList())
     var showClearDialog by remember { mutableStateOf(false) }
+
+    // Per-child tab state: 0 = "All", 1..N = per child
+    var selectedChildTab by remember { mutableStateOf(0) }
+
+    val childTabNames by remember(children) {
+        derivedStateOf {
+            listOf("All") + children.map { it.name }
+        }
+    }
+
+    val filteredLog by remember {
+        derivedStateOf {
+            if (selectedChildTab == 0) {
+                log
+            } else {
+                val targetChild = children.getOrNull(selectedChildTab - 1)?.name
+                if (targetChild != null) {
+                    log.filter { it.childName == targetChild }
+                } else {
+                    log
+                }
+            }
+        }
+    }
 
     if (showClearDialog) {
         AlertDialog(
@@ -108,43 +137,64 @@ fun ActivityLogScreen(navController: NavController) {
             )
         }
     ) { paddingValues ->
-        if (log.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = "\uD83D\uDCCB",
-                        fontSize = 48.sp
-                    )
-                    Text(
-                        text = "No activity yet",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 12.dp)
-                    )
-                    Text(
-                        text = "Events will appear here once the watcher starts processing photos.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 4.dp, start = 32.dp, end = 32.dp),
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                    )
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            // Per-child tabs
+            if (children.isNotEmpty()) {
+                ScrollableTabRow(
+                    selectedTabIndex = selectedChildTab.coerceIn(0, childTabNames.lastIndex),
+                    edgePadding = 12.dp
+                ) {
+                    childTabNames.forEachIndexed { index, title ->
+                        Tab(
+                            selected = selectedChildTab == index,
+                            onClick = { selectedChildTab = index },
+                            text = { Text(title) }
+                        )
+                    }
                 }
             }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(log) { entry ->
-                    LogEntryCard(entry)
+
+            if (filteredLog.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "\uD83D\uDCCB",
+                            fontSize = 48.sp
+                        )
+                        Text(
+                            text = if (selectedChildTab == 0) "No activity yet"
+                            else "No activity for this child",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 12.dp)
+                        )
+                        Text(
+                            text = "Events will appear here once the watcher starts processing photos.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 4.dp, start = 32.dp, end = 32.dp),
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(filteredLog) { entry ->
+                        LogEntryCard(entry)
+                    }
                 }
             }
         }
@@ -200,6 +250,15 @@ private fun LogEntryCard(entry: LogEntry) {
                     color = textColor,
                     fontWeight = if (entry.type == "match" || entry.type == "error") FontWeight.SemiBold else FontWeight.Normal
                 )
+                if (entry.childName != null) {
+                    Text(
+                        text = entry.childName,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(top = 1.dp)
+                    )
+                }
                 Text(
                     text = relativeTime(entry.timestamp),
                     style = MaterialTheme.typography.bodySmall,

@@ -155,13 +155,17 @@ class FolderWatcherService : Service() {
                         val score = faceNetHelper.similarityScore(embedding, child.embedding)
                         if (score >= threshold) {
                             Log.i(TAG, "Match! child=${child.name} score=$score file=${file.name}")
-                            ImageSaver.saveToAlbum(this@FolderWatcherService, bitmap)
+                            val savedUri = ImageSaver.saveToAlbum(this@FolderWatcherService, bitmap)
                             prefs.incrementMatched()
+                            // Record which child matched this saved photo
+                            val savedName = "child_${System.currentTimeMillis()}.jpg"
+                            prefs.addMatchedPhotoRecord(savedName, child.name)
                             notifyMatch(file.name, score, child.name, face)
                             prefs.addLogEntry(LogEntry(
                                 timestamp = System.currentTimeMillis(),
                                 type = "match",
-                                details = "Match found in ${file.name}"
+                                details = "Match: ${child.name} found in ${file.name}",
+                                childName = child.name
                             ))
                             matchFound = true
                             return
@@ -176,13 +180,17 @@ class FolderWatcherService : Service() {
                     val score = faceNetHelper.similarityScore(embedding, refEmbedding)
                     if (score >= threshold) {
                         Log.i(TAG, "Match! score=$score file=${file.name}")
-                        ImageSaver.saveToAlbum(this@FolderWatcherService, bitmap)
+                        val savedUri = ImageSaver.saveToAlbum(this@FolderWatcherService, bitmap)
                         prefs.incrementMatched()
+                        // Record matched photo (no specific child in legacy mode)
+                        val savedName = "child_${System.currentTimeMillis()}.jpg"
+                        prefs.addMatchedPhotoRecord(savedName, null)
                         notifyMatch(file.name, score, null, face)
                         prefs.addLogEntry(LogEntry(
                             timestamp = System.currentTimeMillis(),
                             type = "match",
-                            details = "Match found in ${file.name}"
+                            details = "Match found in ${file.name}",
+                            childName = null
                         ))
                         matchFound = true
                         break
