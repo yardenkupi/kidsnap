@@ -137,7 +137,10 @@ class FolderWatcherService : Service() {
 
             val bitmap = BitmapFactory.decodeFile(file.absolutePath) ?: return
             val threshold = prefs.getThreshold().first()
-            val faces = faceDetector.detectAndCrop(bitmap)
+
+            // Extract embeddings for ALL faces in the photo
+            val faceEmbeddings = faceNetHelper.extractAllFaceEmbeddings(bitmap, faceDetector)
+            Log.d(TAG, "Detected ${faceEmbeddings.size} face(s) in ${file.name}")
 
             // Track every processed image
             prefs.incrementProcessed()
@@ -145,46 +148,66 @@ class FolderWatcherService : Service() {
             // (b) Multi-child matching: use children list if available, otherwise legacy single embedding
             val children = prefs.getChildren().first()
 
-            var matchFound = false
+            var photoSaved = false
+            val matchedChildren = mutableSetOf<String>()
 
             if (children.isNotEmpty()) {
-                // Match against any registered child
-                for (face in faces) {
-                    val embedding = faceNetHelper.getEmbedding(face)
+                // Match each detected face against all registered children
+                for ((faceIndex, pair) in faceEmbeddings.withIndex()) {
+                    val (_, embedding) = pair
                     for (child in children) {
-                        val score = faceNetHelper.similarityScore(embedding, child.embedding)
-                        if (score >= threshold) {
-                            Log.i(TAG, "Match! child=${child.name} score=$score file=${file.name}")
-                            ImageSaver.saveToAlbum(this@FolderWatcherService, bitmap)
+                        val result = faceNetHelper.compareWithConfidence(embedding, child.embedding)
+                        if (result.score >= threshold) {
+                            Log.i(TAG, "Match! child=${child.name} score=${result.score} confidence=${result.confidence} face=$faceIndex file=${file.name}")
+
+                            // Save the photo only once even if multiple children match
+                            if (!photoSaved) {
+                                ImageSaver.saveToAlbum(this@FolderWatcherService, bitmap)
+                                photoSaved = true
+                            }
+
                             prefs.incrementMatched()
-                            notifyMatch(file.name, score, child.name, face)
+
+                            // Crop the matched face for the notification icon
+                            val faceCrops = faceDetector.detectAndCrop(bitmap)
+                            val faceBitmap = faceCrops.getOrNull(faceIndex)
+
+                            notifyMatch(file.name, result.score, child.name, faceBitmap)
                             prefs.addLogEntry(LogEntry(
                                 timestamp = System.currentTimeMillis(),
                                 type = "match",
-                                details = "Match found in ${file.name}"
+                                details = "Match: ${child.name} in ${file.name} (${result.confidence} confidence, score=${String.format("%.2f", result.score)})",
+                                confidence = result.confidence
                             ))
-                            matchFound = true
-                            return
+                            matchedChildren.add(child.name)
                         }
                     }
+                }
+
+                if (matchedChildren.size > 1) {
+                    Log.i(TAG, "Multiple children matched in ${file.name}: ${matchedChildren.joinToString()}")
                 }
             } else {
                 // Legacy: single reference embedding
                 val refEmbedding = prefs.getEmbedding().first() ?: return
-                for (face in faces) {
-                    val embedding = faceNetHelper.getEmbedding(face)
-                    val score = faceNetHelper.similarityScore(embedding, refEmbedding)
-                    if (score >= threshold) {
-                        Log.i(TAG, "Match! score=$score file=${file.name}")
+                for ((faceIndex, pair) in faceEmbeddings.withIndex()) {
+                    val (_, embedding) = pair
+                    val result = faceNetHelper.compareWithConfidence(embedding, refEmbedding)
+                    if (result.score >= threshold) {
+                        Log.i(TAG, "Match! score=${result.score} confidence=${result.confidence} face=$faceIndex file=${file.name}")
                         ImageSaver.saveToAlbum(this@FolderWatcherService, bitmap)
                         prefs.incrementMatched()
-                        notifyMatch(file.name, score, null, face)
+
+                        val faceCrops = faceDetector.detectAndCrop(bitmap)
+                        val faceBitmap = faceCrops.getOrNull(faceIndex)
+
+                        notifyMatch(file.name, result.score, null, faceBitmap)
                         prefs.addLogEntry(LogEntry(
                             timestamp = System.currentTimeMillis(),
                             type = "match",
-                            details = "Match found in ${file.name}"
+                            details = "Match found in ${file.name} (${result.confidence} confidence, score=${String.format("%.2f", result.score)})",
+                            confidence = result.confidence
                         ))
-                        matchFound = true
                         break
                     }
                 }
